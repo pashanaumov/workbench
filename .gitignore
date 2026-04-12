@@ -10,3 +10,6 @@ kilocode/
 openclaude/
 system-prompts-*/
 claude-chat.txt
+
+.kilo
+.git
