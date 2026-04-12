@@ -1,5 +1,6 @@
 # Runtime state - not source
 session-memory/*.md
+.tmp
 .tmp/*
 !.tmp/.gitkeep
 

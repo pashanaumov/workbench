@@ -152,4 +152,4 @@ workbench mempalace status          # Check MemPalace status
 
 ## License
 
-[Add your license here]
+MIT © Pasha Naumov
