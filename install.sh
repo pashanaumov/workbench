@@ -29,6 +29,15 @@ else
   TMP_DIR=$(mktemp -d)
   trap 'rm -rf "$TMP_DIR"' EXIT
   git clone --depth=1 "$REPO" "$TMP_DIR/workbench" >/dev/null 2>&1
+  
+  # Debug: show what was cloned
+  if [ ! -d "$TMP_DIR/workbench/skills" ]; then
+    echo "Error: skills directory not found after clone" >&2
+    echo "Contents of $TMP_DIR/workbench:" >&2
+    ls -la "$TMP_DIR/workbench/" >&2
+    exit 1
+  fi
+  
   mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp}
   cp -r "$TMP_DIR/workbench/skills/"* "$TARGET/skills/"
   cp -r "$TMP_DIR/workbench/hooks/"* "$TARGET/hooks/"
