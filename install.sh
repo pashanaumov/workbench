@@ -14,10 +14,11 @@ echo "Installing workbench to: $TARGET"
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "bash" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/config.yaml" ]; then
   # Local execution — copy from repo
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp}
+  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin}
   cp -r "$SCRIPT_DIR/skills/"* "$TARGET/skills/"
   cp -r "$SCRIPT_DIR/hooks/"* "$TARGET/hooks/"
   cp -r "$SCRIPT_DIR/templates/"* "$TARGET/templates/"
+  cp -r "$SCRIPT_DIR/bin/"* "$TARGET/bin/"
   cp "$SCRIPT_DIR/config.yaml" "$TARGET/config.yaml"
   cp "$SCRIPT_DIR/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
 else
@@ -38,16 +39,20 @@ else
     exit 1
   fi
   
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp}
+  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin}
   cp -r "$TMP_DIR/workbench/skills/"* "$TARGET/skills/"
   cp -r "$TMP_DIR/workbench/hooks/"* "$TARGET/hooks/"
   cp -r "$TMP_DIR/workbench/templates/"* "$TARGET/templates/"
+  cp -r "$TMP_DIR/workbench/bin/"* "$TARGET/bin/"
   cp "$TMP_DIR/workbench/config.yaml" "$TARGET/config.yaml"
   cp "$TMP_DIR/workbench/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
 fi
 
 # Make hook scripts executable
 find "$TARGET/hooks" -name "*.sh" -type f -exec chmod +x {} \;
+
+# Make bin scripts executable
+chmod +x "$TARGET/bin/"*
 
 # Seed empty dirs
 touch "$TARGET/memory/.gitkeep"
