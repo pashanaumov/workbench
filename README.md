@@ -29,7 +29,7 @@ workbench/
 **Recommended (git clone):**
 
 ```bash
-git clone https://github.com/pashanaumov/workbench ~/.workbench
+git clone https://github.com/pashanaumov/workbench.sh ~/.workbench
 cd ~/.workbench
 ./install.sh
 ```
@@ -37,7 +37,7 @@ cd ~/.workbench
 **Fast path (curl):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench.sh/main/install.sh | bash
 ```
 
 **Verify installation:**
