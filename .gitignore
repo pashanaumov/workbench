@@ -1,8 +1,6 @@
 # Runtime state - not source
 session-memory/*.md
-.tmp
-.tmp/*
-!.tmp/.gitkeep
+.tmp/
 
 # Reference repos (if present)
 claude-code/

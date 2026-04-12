@@ -25,7 +25,6 @@ find "$TARGET/hooks" -name "*.sh" -type f -exec chmod +x {} \;
 # Create .gitkeep files
 touch "$TARGET/memory/.gitkeep"
 touch "$TARGET/session-memory/.gitkeep"
-touch "$TARGET/.tmp/.gitkeep"
 
 echo ""
 echo "✓ Workbench installed successfully"
