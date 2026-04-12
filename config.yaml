@@ -1,0 +1,31 @@
+# Workbench configuration
+# All paths support ~ expansion. Override WORKBENCH_ROOT env var to relocate entirely.
+
+paths:
+  # Where consolidated memory files live (MEMORY.md and topic files)
+  memory_root: ~/.workbench/memory
+  
+  # Where per-session structured notes are stored
+  session_memory_root: ~/.workbench/session-memory
+  
+  # Runtime state for hooks (counters, flags, session keys)
+  tmp_root: ~/.workbench/.tmp
+
+session_extract:
+  # Trigger mid-session extraction after this many tool calls
+  min_tool_calls: 3
+
+dream:
+  # Enable automatic dream consolidation
+  enabled: true
+  
+  # Sessions completed since last dream before triggering
+  min_sessions: 5
+  
+  # Hours since last dream before triggering
+  min_hours: 24
+
+integrations:
+  mempalace:
+    # auto = detect on PATH, true = force on, false = force off
+    enabled: auto

@@ -1,0 +1,11 @@
+# Runtime state - not source
+session-memory/*.md
+.tmp/*
+!.tmp/.gitkeep
+
+# Reference repos (if present)
+claude-code/
+kilocode/
+openclaude/
+system-prompts-*/
+claude-chat.txt

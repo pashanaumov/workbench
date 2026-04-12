@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
+
+cmd_doctor() {
+  echo "Workbench Health Check"
+  echo "======================"
+  echo ""
+  
+  local status=0
+  
+  # Check root exists
+  if [ -d "$WORKBENCH_ROOT" ]; then
+    echo "✓ Workbench root: $WORKBENCH_ROOT"
+  else
+    echo "✗ Workbench root not found: $WORKBENCH_ROOT"
+    status=1
+  fi
+  
+  # Check required directories
+  for dir in skills hooks memory templates .tmp; do
+    if [ -d "$WORKBENCH_ROOT/$dir" ]; then
+      echo "✓ Directory: $dir/"
+    else
+      echo "✗ Missing: $dir/"
+      status=1
+    fi
+  done
+  
+  # Check key files
+  for file in config.yaml memory/MEMORY.md; do
+    if [ -f "$WORKBENCH_ROOT/$file" ]; then
+      echo "✓ File: $file"
+    else
+      echo "⚠ Missing: $file"
+    fi
+  done
+  
+  # Check skills
+  for skill in skillify session-extract dream; do
+    if [ -f "$WORKBENCH_ROOT/skills/$skill/SKILL.md" ]; then
+      echo "✓ Skill: $skill"
+    else
+      echo "✗ Missing skill: $skill"
+      status=1
+    fi
+  done
+  
+  # Check optional tools
+  echo ""
+  echo "Optional Dependencies:"
+  for tool in jq yq mempalace; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      echo "✓ $tool ($(command -v "$tool"))"
+    else
+      echo "○ $tool (not installed)"
+    fi
+  done
+  
+  # Check Copilot hooks if installed
+  if [ -d "$WORKBENCH_ROOT/hooks/copilot" ]; then
+    echo ""
+    echo "Copilot Hooks:"
+    for script in session-start.sh post-tool-use.sh session-end.sh; do
+      if [ -x "$WORKBENCH_ROOT/hooks/copilot/$script" ]; then
+        echo "✓ $script (executable)"
+      else
+        echo "⚠ $script (not executable)"
+      fi
+    done
+  fi
+  
+  echo ""
+  if [ $status -eq 0 ]; then
+    echo "Status: ✓ Healthy"
+  else
+    echo "Status: ✗ Issues found"
+  fi
+  
+  return $status
+}
+
+cmd_print_steering_doc() {
+  if [ -f "$WORKBENCH_ROOT/templates/steering-doc-template.md" ]; then
+    cat "$WORKBENCH_ROOT/templates/steering-doc-template.md"
+  else
+    echo "Error: steering-doc-template.md not found" >&2
+    exit 1
+  fi
+}
+
+cmd_install_copilot() {
+  local target="${1:-.}"
+  
+  if [ ! -d "$target" ]; then
+    echo "Error: Target directory does not exist: $target" >&2
+    exit 1
+  fi
+  
+  echo "Installing Copilot hooks to: $target/.github/hooks/"
+  
+  mkdir -p "$target/.github/hooks/copilot"
+  cp -r "$WORKBENCH_ROOT/hooks/copilot/"* "$target/.github/hooks/copilot/"
+  chmod +x "$target/.github/hooks/copilot/"*.sh
+  
+  echo ""
+  echo "✓ Hooks installed"
+  echo ""
+  echo "Next steps:"
+  echo "  1. Commit .github/hooks/ to your default branch"
+  echo "  2. Add steering doc to .github/copilot-instructions.md:"
+  echo "     workbench print steering-doc >> .github/copilot-instructions.md"
+  echo ""
+}
+
+cmd_mempalace_status() {
+  if command -v mempalace >/dev/null 2>&1; then
+    echo "MemPalace: installed ($(command -v mempalace))"
+    mempalace status 2>/dev/null || echo "  (status command not available)"
+  else
+    echo "MemPalace: not installed"
+    echo ""
+    echo "To enable MemPalace integration:"
+    echo "  1. Set integrations.mempalace.enabled: true in config.yaml"
+    echo "  2. It will auto-install on first use"
+    echo "  Or install manually: https://github.com/MemPalace/mempalace"
+  fi
+}
+
+cmd_init() {
+  if [ -d "$WORKBENCH_ROOT" ]; then
+    echo "Workbench already initialized at: $WORKBENCH_ROOT"
+    exit 1
+  fi
+  
+  echo "Initializing workbench at: $WORKBENCH_ROOT"
+  
+  # Find install.sh relative to this script
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  
+  if [ -f "$script_dir/install.sh" ]; then
+    "$script_dir/install.sh" "$WORKBENCH_ROOT"
+  else
+    echo "Error: install.sh not found" >&2
+    exit 1
+  fi
+}
+
+# Main command dispatcher
+case "${1:-}" in
+  doctor)
+    cmd_doctor
+    ;;
+  print)
+    shift
+    case "${1:-}" in
+      steering-doc)
+        cmd_print_steering_doc
+        ;;
+      *)
+        echo "Usage: workbench print steering-doc" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  install)
+    shift
+    case "${1:-}" in
+      copilot)
+        shift
+        cmd_install_copilot "${1:-.}"
+        ;;
+      *)
+        echo "Usage: workbench install copilot [target_dir]" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  mempalace)
+    shift
+    case "${1:-}" in
+      status)
+        cmd_mempalace_status
+        ;;
+      *)
+        echo "Usage: workbench mempalace status" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  init)
+    cmd_init
+    ;;
+  *)
+    echo "Workbench - Portable agent enhancement toolkit"
+    echo ""
+    echo "Usage:"
+    echo "  workbench init                      Initialize workbench"
+    echo "  workbench doctor                    Check installation health"
+    echo "  workbench print steering-doc        Print steering doc snippet"
+    echo "  workbench install copilot [dir]     Install Copilot hooks"
+    echo "  workbench mempalace status          Check MemPalace status"
+    echo ""
+    exit 1
+    ;;
+esac

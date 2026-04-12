@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "./session-start.sh",
+        "cwd": ".github/hooks/copilot",
+        "timeoutSec": 15
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "./post-tool-use.sh",
+        "cwd": ".github/hooks/copilot",
+        "timeoutSec": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "./session-end.sh",
+        "cwd": ".github/hooks/copilot",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
