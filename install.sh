@@ -159,7 +159,7 @@ printf "\n"
 printf "${GREEN}${CHECK}${RESET}  ${BOLD}Installation complete${RESET}\n"
 printf "\n"
 
-# PATH setup
+# PATH setup (global only)
 if [[ "$TARGET" == "$HOME/.workbench" ]]; then
   PATH_EXPORT="export PATH=\"\$HOME/.workbench/bin:\$PATH\""
   
@@ -170,44 +170,117 @@ if [[ "$TARGET" == "$HOME/.workbench" ]]; then
         echo "" >> "$rc_file"
         echo "# Workbench" >> "$rc_file"
         echo "$PATH_EXPORT" >> "$rc_file"
-        printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Added to ${CYAN}$rc_file${RESET}\n"
+        printf "  ${GREEN}${CHECK}${RESET} ${DIM}Added to${RESET} ${CYAN}$rc_file${RESET}\n"
         return 0
       else
-        printf "${DIM}${BAR}${RESET}  ${DIM}○ Already in${RESET} ${CYAN}$rc_file${RESET}\n"
+        printf "  ${DIM}○ Already in${RESET} ${CYAN}$rc_file${RESET}\n"
         return 1
       fi
     fi
     return 1
   }
   
-  printf "${DIM}┌${RESET}\n"
   ADDED=false
   for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
     if add_to_shell_rc "$rc"; then
       ADDED=true
     fi
   done
-  printf "${DIM}└${RESET}\n"
   
   if [ "$ADDED" = true ]; then
     printf "\n"
     printf "${DIM}Restart your shell or run:${RESET} ${CYAN}source ~/.zshrc${RESET}\n"
   fi
-  
-  printf "\n"
-  printf "${BOLD}Next steps${RESET}\n"
-  printf "${DIM}┌${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}wb doctor${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}wb print steering-doc${RESET}  ${DIM}# Add to your AI tool${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}wb install copilot${RESET}    ${DIM}# Optional: Install hooks${RESET}\n"
-  printf "${DIM}└${RESET}\n"
-else
-  printf "${BOLD}Next steps${RESET}\n"
-  printf "${DIM}┌${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}export PATH=\"$(pwd)/$TARGET/bin:\$PATH\"${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}$TARGET/bin/wb doctor${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  ${CYAN}$TARGET/bin/wb print steering-doc${RESET}\n"
-  printf "${DIM}└${RESET}\n"
 fi
 
+# Agent setup
+printf "\n"
+printf "${CYAN}${STEP}${RESET}  Which AI tool do you use?\n"
+printf "${DIM}${BAR}${RESET}\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}1${RESET}  Universal ${DIM}(.agents) - Works with most tools${RESET}\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}2${RESET}  GitHub Copilot ${DIM}(cloud agent or CLI)${RESET}\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}3${RESET}  Cursor\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}4${RESET}  Windsurf\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}5${RESET}  Kiro / Claude Code\n"
+printf "${DIM}${BAR}${RESET}  ${BOLD}6${RESET}  Skip\n"
+printf "${DIM}${BAR}${RESET}\n"
+printf "${GREEN}?${RESET}  Choose ${DIM}[1-6] (default: 1)${RESET} ${ARROW} "
+read AGENT_CHOICE </dev/tty
+AGENT_CHOICE=${AGENT_CHOICE:-1}
+
+STEERING_DOC_FILE=""
+SKILLS_DIR=""
+GLOBAL_SKILLS_DIR=""
+NEEDS_HOOKS=false
+AGENT_LABEL=""
+
+case "$AGENT_CHOICE" in
+  1) STEERING_DOC_FILE="AGENTS.md"; SKILLS_DIR=".agents/skills"; GLOBAL_SKILLS_DIR="$HOME/.config/agents/skills"; AGENT_LABEL="Universal (.agents)" ;;
+  2) STEERING_DOC_FILE=".github/copilot-instructions.md"; SKILLS_DIR=".agents/skills"; GLOBAL_SKILLS_DIR="$HOME/.copilot/skills"; NEEDS_HOOKS=true; AGENT_LABEL="GitHub Copilot" ;;
+  3) STEERING_DOC_FILE=".cursorrules"; SKILLS_DIR=".cursor/skills"; GLOBAL_SKILLS_DIR="$HOME/.cursor/skills"; AGENT_LABEL="Cursor" ;;
+  4) STEERING_DOC_FILE=".windsurfrules"; SKILLS_DIR=".windsurf/skills"; GLOBAL_SKILLS_DIR="$HOME/.windsurf/skills"; AGENT_LABEL="Windsurf" ;;
+  5) STEERING_DOC_FILE="AGENTS.md"; SKILLS_DIR=".kiro/skills"; GLOBAL_SKILLS_DIR="$HOME/.kiro/skills"; AGENT_LABEL="Kiro / Claude Code" ;;
+  *) printf "${DIM}${BAR}${RESET}  ${ARROW} Skipped\n" ;;
+esac
+
+if [ -n "$SKILLS_DIR" ]; then
+  printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} ${CYAN}$AGENT_LABEL${RESET}\n"
+  printf "${DIM}${BAR}${RESET}\n"
+
+  # Ask for agent integration scope
+  printf "${DIM}${BAR}${RESET}  ${BOLD}Where to install agent integration?${RESET}\n"
+  printf "${DIM}${BAR}${RESET}\n"
+  printf "${DIM}${BAR}${RESET}  ${BOLD}1${RESET}  Project ${DIM}(current directory)${RESET}\n"
+  printf "${DIM}${BAR}${RESET}  ${BOLD}2${RESET}  Global ${DIM}(home directory)${RESET}\n"
+  printf "${DIM}${BAR}${RESET}\n"
+  printf "${GREEN}?${RESET}  Choose ${DIM}[1-2] (default: 1)${RESET} ${ARROW} "
+  read INTEGRATION_SCOPE </dev/tty
+  INTEGRATION_SCOPE=${INTEGRATION_SCOPE:-1}
+
+  if [ "$INTEGRATION_SCOPE" = "2" ]; then
+    # Global agent integration
+    INSTALL_SKILLS_DIR="$GLOBAL_SKILLS_DIR"
+    INSTALL_STEERING_DOC="$HOME/$STEERING_DOC_FILE"
+  else
+    # Project agent integration
+    INSTALL_SKILLS_DIR="$SKILLS_DIR"
+    INSTALL_STEERING_DOC="$STEERING_DOC_FILE"
+  fi
+
+  printf "${DIM}${BAR}${RESET}\n"
+
+  # Install skills
+  mkdir -p "$INSTALL_SKILLS_DIR"
+  for skill in "$TARGET/skills/"*; do
+    skill_name=$(basename "$skill")
+    if [ -d "$skill" ] && [ -f "$skill/SKILL.md" ]; then
+      ln -sf "$skill" "$INSTALL_SKILLS_DIR/$skill_name" 2>/dev/null || cp -r "$skill" "$INSTALL_SKILLS_DIR/$skill_name"
+    fi
+  done
+  printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Skills installed to ${CYAN}$INSTALL_SKILLS_DIR${RESET}\n"
+
+  # Install hooks for Copilot (project only)
+  if [ "$NEEDS_HOOKS" = true ] && [ "$INTEGRATION_SCOPE" = "1" ]; then
+    mkdir -p ".github/hooks/copilot"
+    cp -r "$TARGET/hooks/copilot/"* ".github/hooks/copilot/"
+    chmod +x ".github/hooks/copilot/"*.sh
+    printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Hooks installed to ${CYAN}.github/hooks/copilot/${RESET}\n"
+    printf "${DIM}${BAR}${RESET}  ${DIM}→ For cloud agent: commit .github/hooks/ to default branch${RESET}\n"
+    printf "${DIM}${BAR}${RESET}  ${DIM}→ For CLI: hooks work immediately${RESET}\n"
+  fi
+
+  # Write steering doc
+  printf "${DIM}${BAR}${RESET}\n"
+  mkdir -p "$(dirname "$INSTALL_STEERING_DOC")"
+  if [ -f "$INSTALL_STEERING_DOC" ] && grep -q "Workbench Memory System" "$INSTALL_STEERING_DOC" 2>/dev/null; then
+    printf "${DIM}${BAR}${RESET}  ${DIM}○ Steering doc already in${RESET} ${CYAN}$INSTALL_STEERING_DOC${RESET}\n"
+  else
+    printf "\n" >> "$INSTALL_STEERING_DOC"
+    cat "$TARGET/templates/steering-doc-template.md" >> "$INSTALL_STEERING_DOC"
+    printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Steering doc added to ${CYAN}$INSTALL_STEERING_DOC${RESET}\n"
+  fi
+fi
+
+printf "\n"
+printf "${BOLD}Done!${RESET} ${DIM}Run${RESET} ${CYAN}wb doctor${RESET} ${DIM}to verify.${RESET}\n"
 printf "\n"

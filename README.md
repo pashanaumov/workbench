@@ -64,43 +64,21 @@ wb doctor
 
 ### Setup
 
-**1. Add Steering Doc**
+The installer handles everything — after installing files it will ask which AI tool you use and automatically:
+- Install hooks (for Copilot)
+- Add the steering doc to the right config file
 
-In your AI tool's chat, run:
+If you need to set up a different tool later:
+
+```bash
+wb install copilot        # installs hooks + steering doc for Copilot
+```
+
+Or manually add the steering doc for tools without hooks (Cursor, Windsurf, Kiro):
 
 ```
 /workbench setup
 ```
-
-This detects your AI tool and adds the memory injection instructions to the right config file automatically.
-
-**2. Optional: Install Hooks**
-
-For automatic session extraction and memory consolidation:
-
-**GitHub Copilot (Cloud Agent):**
-```bash
-wb install copilot
-
-# Commit to default branch (required for cloud agent)
-git add .github/hooks/
-git commit -m "Add workbench hooks"
-git push
-```
-
-**GitHub Copilot CLI:**
-```bash
-# Hooks load from current working directory — no commit needed
-wb install copilot
-```
-
-**3. Start Using**
-
-The core skills are now available:
-- `/skillify` - Capture workflows as reusable skills
-- `/session-extract` - Extract structured session notes
-- `/dream` - Consolidate notes into long-term memory
-- `/workbench` - Configure workbench settings
 
 ## Core Capabilities
 
