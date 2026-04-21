@@ -66,20 +66,13 @@ wb doctor
 
 **1. Add Steering Doc**
 
-Add the memory injection instructions to your AI tool's configuration:
+In your AI tool's chat, run:
 
-```bash
-# Print the steering doc snippet
-workbench print steering-doc
-
-# For Copilot (cloud agent), append to .github/copilot-instructions.md
-workbench print steering-doc >> .github/copilot-instructions.md
-
-# For Copilot CLI, add to AGENTS.md or .github/copilot-instructions.md
-workbench print steering-doc >> AGENTS.md
+```
+/workbench setup
 ```
 
-See `templates/steering-doc-template.md` for other tools (Cursor, Windsurf, Kilo, Claude Code).
+This detects your AI tool and adds the memory injection instructions to the right config file automatically.
 
 **2. Optional: Install Hooks**
 
@@ -87,8 +80,7 @@ For automatic session extraction and memory consolidation:
 
 **GitHub Copilot (Cloud Agent):**
 ```bash
-# In your project directory
-workbench install copilot
+wb install copilot
 
 # Commit to default branch (required for cloud agent)
 git add .github/hooks/
@@ -98,10 +90,8 @@ git push
 
 **GitHub Copilot CLI:**
 ```bash
-# Hooks load from current working directory
-workbench install copilot
-
-# No need to commit - works immediately
+# Hooks load from current working directory — no commit needed
+wb install copilot
 ```
 
 **3. Start Using**
@@ -143,6 +133,7 @@ Consolidate recent session notes into durable, topic-based memory files. Makes t
 Configure workbench settings interactively.
 
 ```bash
+/workbench setup               # Add steering doc to your AI tool's config
 /workbench status              # Show current configuration
 /workbench mode hybrid         # Switch to hybrid mode
 /workbench mempalace on        # Enable MemPalace integration
@@ -168,6 +159,8 @@ Switch modes with `/workbench mode <global|local|hybrid>`.
 **Hooks** (optional) automate when skills run. The Copilot implementation is a reference — see `hooks/copilot/hooks.README.md` for the pattern and how to adapt it for other tools.
 
 **Memory** flows from session notes → dream consolidation → MEMORY.md index → injected into future sessions via steering doc.
+
+**Background behavior**: Memory loads automatically and silently at session start — no chat announcements. Hook diagnostic output (🔧/✅) appears in your terminal stderr so you can see workbench is active.
 
 **Without hooks**, you can still use workbench manually:
 - Run `/session-extract` every 10-15 turns or at session end
