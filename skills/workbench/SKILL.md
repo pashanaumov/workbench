@@ -10,6 +10,30 @@ Interactive configuration and status management for workbench.
 
 ## Commands
 
+### `setup`
+Add workbench steering doc to the current AI tool's configuration file.
+
+**Steps:**
+1. Detect the current AI tool by checking for config files:
+   - `.github/copilot-instructions.md` → GitHub Copilot
+   - `AGENTS.md` → Kiro CLI / Claude Code
+   - `.cursorrules` → Cursor
+   - `.windsurfrules` → Windsurf
+2. Read the steering doc template from `~/.workbench/templates/steering-doc-template.md`
+3. Extract the relevant section for the detected tool
+4. Check if steering doc is already present in the config file
+5. If not present, append it to the config file
+6. If file doesn't exist, create it with the steering doc
+7. Confirm what was added and where
+
+**Example output:**
+```
+✓ Detected GitHub Copilot (.github/copilot-instructions.md)
+✓ Added workbench steering doc to .github/copilot-instructions.md
+
+Next: Restart your AI tool to load the new instructions
+```
+
 ### `status`
 Show current workbench configuration and integration status.
 
@@ -81,6 +105,7 @@ Update a configuration value.
 ## Usage Examples
 
 ```
+/workbench setup
 /workbench status
 /workbench mode hybrid
 /workbench mempalace on

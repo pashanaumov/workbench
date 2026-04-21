@@ -11,22 +11,30 @@ Add to `.github/copilot-instructions.md` in your repository (must be on default 
 ```markdown
 ## Workbench Memory System
 
-**On every session start:**
-1. Run: `cat ~/.workbench/.tmp/active-memory.md 2>/dev/null || echo "No memory loaded"`
-2. If file exists and has content, acknowledge: "Loaded workbench memory"
-3. If file doesn't exist or is empty, continue silently
+**On every session start (automatic, silent):**
+1. Silently run: `cat ~/.workbench/.tmp/active-memory.md 2>/dev/null`
+2. If file exists and has content, load it into context without announcing
+3. This memory is now part of your working context for the session
+4. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected and helpful for debugging
 
-**After every tool execution:**
-1. Run: `test -f ~/.workbench/.tmp/extract-pending && echo "EXTRACT_PENDING" || echo ""`
+**After every tool execution (automatic, silent):**
+1. Silently check: `test -f ~/.workbench/.tmp/extract-pending && echo "EXTRACT_PENDING"`
 2. If output is "EXTRACT_PENDING":
-   - Run the `/session-extract` skill
-   - Run: `rm ~/.workbench/.tmp/extract-pending`
+   - Silently run the `/session-extract` skill
+   - Silently run: `rm ~/.workbench/.tmp/extract-pending`
+3. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected
 
-**On session end:**
-1. Run: `test -f ~/.workbench/.tmp/dream-pending && echo "DREAM_PENDING" || echo ""`
+**On session end (automatic, silent):**
+1. Silently check: `test -f ~/.workbench/.tmp/dream-pending && echo "DREAM_PENDING"`
 2. If output is "DREAM_PENDING":
-   - Run the `/dream` skill
-   - Run: `rm ~/.workbench/.tmp/dream-pending`
+   - Silently run the `/dream` skill
+   - Silently run: `rm ~/.workbench/.tmp/dream-pending`
+3. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected
+
+**Important:** 
+- All workbench operations should happen silently in the background (no chat announcements)
+- Hook diagnostic output (🔧/✅) to stderr is intentional and should remain visible
+- Never announce "Loading memory" or "Running extract" in chat unless the user explicitly asks about workbench status
 ```
 
 ### CLI Setup
@@ -48,18 +56,23 @@ Add to `.cursorrules` or `.windsurfrules` in project root:
 ```markdown
 ## Workbench Memory System
 
-**On every session start:**
-1. Read `~/.workbench/.tmp/active-memory.md`
-2. If file exists and has content, acknowledge: "Loaded workbench memory"
-3. If file doesn't exist, continue silently
+**On every session start (automatic, silent):**
+1. Silently read `~/.workbench/.tmp/active-memory.md`
+2. If file exists and has content, load it into context without announcing
+3. This memory is now part of your working context for the session
 
-**Check for pending tasks:**
+**Check for pending tasks (automatic, silent):**
 1. If `~/.workbench/.tmp/extract-pending` exists:
-   - Run `/session-extract` skill
+   - Silently run `/session-extract` skill
    - Delete the flag file
 2. If `~/.workbench/.tmp/dream-pending` exists:
-   - Run `/dream` skill
+   - Silently run `/dream` skill
    - Delete the flag file
+
+**Important:** 
+- All workbench operations should happen silently in the background (no chat announcements)
+- Tool/skill output may include diagnostic emojis (🔧/✅) - this is expected and helpful
+- Never announce "Loading memory" or "Running extract" in chat unless the user explicitly asks about workbench status
 ```
 
 ## For Kilo / Claude Code
@@ -69,17 +82,23 @@ Add to `AGENTS.md` in project root:
 ```markdown
 ## Workbench Memory System
 
-**On every session start:**
-1. Read `~/.workbench/.tmp/active-memory.md`
-2. If file exists and has content, acknowledge: "Loaded workbench memory"
+**On every session start (automatic, silent):**
+1. Silently read `~/.workbench/.tmp/active-memory.md`
+2. If file exists and has content, load it into context without announcing
+3. This memory is now part of your working context for the session
 
-**Check for pending tasks:**
+**Check for pending tasks (automatic, silent):**
 1. If `~/.workbench/.tmp/extract-pending` exists:
-   - Run `/session-extract` skill
+   - Silently run `/session-extract` skill
    - Delete the flag file
 2. If `~/.workbench/.tmp/dream-pending` exists:
-   - Run `/dream` skill
+   - Silently run `/dream` skill
    - Delete the flag file
+
+**Important:** 
+- All workbench operations should happen silently in the background (no chat announcements)
+- Tool/skill output may include diagnostic emojis (🔧/✅) - this is expected and helpful
+- Never announce "Loading memory" or "Running extract" in chat unless the user explicitly asks about workbench status
 ```
 
 ## Verification
@@ -87,9 +106,10 @@ Add to `AGENTS.md` in project root:
 After adding instructions, test that they work:
 
 1. Start a new session
-2. Ask: "What's in my active memory?"
-3. Agent should read `~/.workbench/.tmp/active-memory.md` and report contents
-4. If file doesn't exist, agent should say so without error
+2. Memory loads automatically and silently in the background
+3. To verify it's working, check the file: `cat ~/.workbench/.tmp/active-memory.md`
+4. Or ask the agent: "What preferences or context do you have about me?"
+5. The agent should have access to your memory without you explicitly loading it
 
 ## Without Hooks (Manual Mode)
 
