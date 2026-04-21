@@ -8,7 +8,8 @@ allowed-tools:
   - Glob
   - Grep
   - Bash(mkdir:*)
-when_to_use: Use at the end of a productive session when you want to capture the workflow as a reusable skill. Examples: "skillify this", "capture this as a skill", "make this a skill"
+when_to_use: |
+  Use at the end of a productive session when you want to capture the workflow as a reusable skill. Examples: "skillify this", "capture this as a skill", "make this a skill"
 argument-hint: "[description of the process you want to capture]"
 arguments:
   - description
