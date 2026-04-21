@@ -1,12 +1,6 @@
 ---
 name: session-extract
-description: Extract structured notes from the current session into a persistent markdown file
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash(mkdir:*)
-when_to_use: Use when you need to capture session context for future reference, typically mid-session after significant work or at session end
+description: Extract structured notes from the current session into a persistent markdown file. Use when you need to capture session context for future reference, typically mid-session after significant work or at session end.
 ---
 
 # Session Extract

@@ -1,18 +1,7 @@
 ---
 name: skillify
-description: Capture this session's repeatable process into a reusable skill
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash(mkdir:*)
-when_to_use: |
-  Use at the end of a productive session when you want to capture the workflow as a reusable skill. Examples: "skillify this", "capture this as a skill", "make this a skill"
+description: Capture this session's repeatable process into a reusable skill. Use at the end of a productive session when you want to capture the workflow as a reusable skill.
 argument-hint: "[description of the process you want to capture]"
-arguments:
-  - description
 ---
 
 # Skillify

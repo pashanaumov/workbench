@@ -2,12 +2,5 @@
 session-memory/*.md
 .tmp/
 
-# Reference repos (if present)
-claude-code/
-kilocode/
-openclaude/
-system-prompts-*/
-claude-chat.txt
-
+# Development artifacts
 .kilo
-.git

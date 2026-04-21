@@ -108,10 +108,22 @@ cmd_install_copilot() {
   echo "✓ Hooks installed"
   echo ""
   echo "Next steps:"
-  echo "  1. Commit .github/hooks/ to your default branch"
-  echo "  2. Add steering doc to .github/copilot-instructions.md:"
+  echo "  1. For cloud agent: Commit .github/hooks/ to your default branch"
+  echo "  2. For CLI: Hooks work immediately from current directory"
+  echo "  3. Add steering doc:"
   echo "     workbench print steering-doc >> .github/copilot-instructions.md"
+  echo "  4. Optional: Install skills to Copilot:"
+  echo "     workbench copilot skills [--global]"
   echo ""
+}
+
+cmd_copilot_skills() {
+  local scope="project"
+  if [ "${1:-}" = "--global" ] || [ "${1:-}" = "-g" ]; then
+    scope="global"
+  fi
+  
+  "$WORKBENCH_ROOT/bin/workbench-copilot-skills" "$scope"
 }
 
 cmd_mempalace_status() {
@@ -177,6 +189,19 @@ case "${1:-}" in
         ;;
     esac
     ;;
+  copilot)
+    shift
+    case "${1:-}" in
+      skills)
+        shift
+        cmd_copilot_skills "$@"
+        ;;
+      *)
+        echo "Usage: workbench copilot skills [--global]" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   mempalace)
     shift
     case "${1:-}" in
@@ -200,6 +225,7 @@ case "${1:-}" in
     echo "  workbench doctor                    Check installation health"
     echo "  workbench print steering-doc        Print steering doc snippet"
     echo "  workbench install copilot [dir]     Install Copilot hooks"
+    echo "  workbench copilot skills [--global] Install skills to Copilot"
     echo "  workbench mempalace status          Check MemPalace status"
     echo ""
     exit 1

@@ -1,6 +1,9 @@
 # Workbench configuration
 # All paths support ~ expansion. Override WORKBENCH_ROOT env var to relocate entirely.
 
+# Mode: global (only ~/.workbench), local (only .workbench in project), hybrid (both)
+mode: global
+
 paths:
   # Where consolidated memory files live (MEMORY.md and topic files)
   memory_root: ~/.workbench/memory

@@ -1,16 +1,6 @@
 ---
 name: dream
-description: Consolidate recent session notes into durable, well-organized memory files
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Bash(ls:*)
-  - Bash(grep:*)
-  - Bash(find:*)
-  - Bash(mkdir:*)
-when_to_use: Use periodically (every 5-10 sessions) to consolidate session notes into long-term memory, or when memory feels scattered
+description: Consolidate recent session notes into durable, well-organized memory files. Use periodically (every 5-10 sessions) to consolidate session notes into long-term memory, or when memory feels scattered.
 ---
 
 # Dream: Memory Consolidation

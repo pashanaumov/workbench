@@ -10,6 +10,8 @@ set -euo pipefail
 # - When threshold reached, write extract-pending flag
 # - Reset counter after triggering
 
+echo "🔧 [Workbench] Tool executed, checking extraction threshold..." >&2
+
 # Read JSON input from stdin
 INPUT=$(cat)
 
@@ -45,8 +47,11 @@ COUNT=$(wc -l < "$COUNTER_FILE" | tr -d ' ')
 # Check threshold
 if [ "$COUNT" -ge "$MIN_TOOL_CALLS" ]; then
   touch "$WORKBENCH_ROOT/.tmp/extract-pending"
+  echo "✅ [Workbench] Extraction threshold reached ($COUNT/$MIN_TOOL_CALLS tools), flagging for /session-extract" >&2
   # Reset counter
   echo "0" > "$COUNTER_FILE"
+else
+  echo "🔧 [Workbench] Tool count: $COUNT/$MIN_TOOL_CALLS" >&2
 fi
 
 exit 0

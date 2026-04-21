@@ -14,6 +14,8 @@ set -euo pipefail
 # Note: Because this fires after the session ends, the extraction happens
 # at the start of the NEXT session (when the agent reads the flag).
 
+echo "🔧 [Workbench] Session ending, preparing final extraction..." >&2
+
 # Get script directory for sourcing helpers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -58,4 +60,5 @@ if [ -f "$COUNTER_FILE" ]; then
   rm -f "$COUNTER_FILE"
 fi
 
+echo "✅ [Workbench] Session ended, extraction will run on next session start" >&2
 exit 0

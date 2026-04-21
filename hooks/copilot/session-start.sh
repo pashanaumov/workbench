@@ -11,6 +11,8 @@ set -euo pipefail
 # - Check dream gate (time + session count)
 # - Reset tool counter
 
+echo "🔧 [Workbench] Session starting..." >&2
+
 # Get script directory for sourcing helpers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -28,6 +30,8 @@ TIMESTAMP=$(echo "$INPUT" | jq -r '.timestamp // empty' 2>/dev/null || echo "")
 
 # Workbench root
 WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
+
+echo "🔧 [Workbench] Loading memory from $WORKBENCH_ROOT" >&2
 
 # Config defaults
 MIN_SESSIONS=5
@@ -116,6 +120,8 @@ HOURS_SINCE_DREAM=$(( (NOW - LAST_DREAM) / 3600 ))
 # Check both gates
 if [ "$SESSION_COUNT" -ge "$MIN_SESSIONS" ] && [ "$HOURS_SINCE_DREAM" -ge "$MIN_HOURS" ]; then
   touch "$WORKBENCH_ROOT/.tmp/dream-pending"
+  echo "🔧 [Workbench] Dream consolidation pending (${SESSION_COUNT} sessions, ${HOURS_SINCE_DREAM}h)" >&2
 fi
 
+echo "✅ [Workbench] Session started successfully" >&2
 exit 0

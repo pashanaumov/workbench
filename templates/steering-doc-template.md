@@ -1,99 +1,118 @@
 # Workbench Memory Integration
 
-Add the following instructions to your AI coding tool's configuration to enable automatic memory loading and skill triggering.
+Add these instructions to your AI tool's configuration to enable automatic memory loading and skill execution.
 
-## Core Instructions
+## For GitHub Copilot (Cloud Agent & CLI)
 
-Add this to your tool's steering document or system prompt:
+### Cloud Agent Setup
+
+Add to `.github/copilot-instructions.md` in your repository (must be on default branch):
 
 ```markdown
-## Agent Memory
+## Workbench Memory System
 
-At the start of every session, read `~/.workbench/.tmp/active-memory.md`.
-This file contains consolidated notes about preferences, projects, and
-working patterns. If the file is empty or missing, continue normally.
+**On every session start:**
+1. Run: `cat ~/.workbench/.tmp/active-memory.md 2>/dev/null || echo "No memory loaded"`
+2. If file exists and has content, acknowledge: "Loaded workbench memory"
+3. If file doesn't exist or is empty, continue silently
 
-If `.workbench/.tmp/extract-pending` exists:
-1. Run the `/session-extract` skill to capture notes from the last session
-2. Delete `.workbench/.tmp/extract-pending`
+**After every tool execution:**
+1. Run: `test -f ~/.workbench/.tmp/extract-pending && echo "EXTRACT_PENDING" || echo ""`
+2. If output is "EXTRACT_PENDING":
+   - Run the `/session-extract` skill
+   - Run: `rm ~/.workbench/.tmp/extract-pending`
 
-If `.workbench/.tmp/dream-pending` exists:
-1. Run the `/dream` skill to consolidate memory
-2. Delete `.workbench/.tmp/dream-pending`
+**On session end:**
+1. Run: `test -f ~/.workbench/.tmp/dream-pending && echo "DREAM_PENDING" || echo ""`
+2. If output is "DREAM_PENDING":
+   - Run the `/dream` skill
+   - Run: `rm ~/.workbench/.tmp/dream-pending`
 ```
 
-## Tool-Specific Placement
+### CLI Setup
 
-### GitHub Copilot
+For `gh copilot` CLI, add to **either**:
 
-Add the core instructions to `.github/copilot-instructions.md` in your repository:
+**Option 1:** `.github/copilot-instructions.md` in your project (same content as above)
 
-```bash
-# Create or append to the file
-cat >> .github/copilot-instructions.md << 'EOF'
+**Option 2:** `AGENTS.md` in your project root (same content as above)
 
-## Agent Memory
-[paste core instructions above]
-EOF
+**Option 3:** `~/.copilot/copilot-instructions.md` for global instructions
+
+The CLI loads hooks from `.github/hooks/` in your current working directory.
+
+## For Cursor / Windsurf
+
+Add to `.cursorrules` or `.windsurfrules` in project root:
+
+```markdown
+## Workbench Memory System
+
+**On every session start:**
+1. Read `~/.workbench/.tmp/active-memory.md`
+2. If file exists and has content, acknowledge: "Loaded workbench memory"
+3. If file doesn't exist, continue silently
+
+**Check for pending tasks:**
+1. If `~/.workbench/.tmp/extract-pending` exists:
+   - Run `/session-extract` skill
+   - Delete the flag file
+2. If `~/.workbench/.tmp/dream-pending` exists:
+   - Run `/dream` skill
+   - Delete the flag file
 ```
 
-### Kilo Code / Claude Code
+## For Kilo / Claude Code
 
-**Option 1:** Add to your project's `AGENTS.md` or `CLAUDE.md` file:
+Add to `AGENTS.md` in project root:
 
-```bash
-cat >> AGENTS.md << 'EOF'
+```markdown
+## Workbench Memory System
 
-## Agent Memory
-[paste core instructions above]
-EOF
+**On every session start:**
+1. Read `~/.workbench/.tmp/active-memory.md`
+2. If file exists and has content, acknowledge: "Loaded workbench memory"
+
+**Check for pending tasks:**
+1. If `~/.workbench/.tmp/extract-pending` exists:
+   - Run `/session-extract` skill
+   - Delete the flag file
+2. If `~/.workbench/.tmp/dream-pending` exists:
+   - Run `/dream` skill
+   - Delete the flag file
 ```
-
-**Option 2:** Add the memory file path to your tool's config:
-
-```json
-{
-  "instructions": [
-    "~/.workbench/.tmp/active-memory.md"
-  ]
-}
-```
-
-### Cursor / Windsurf
-
-Add to `.cursorrules` or `.windsurfrules` in your project root:
-
-```bash
-cat >> .cursorrules << 'EOF'
-
-## Agent Memory
-[paste core instructions above]
-EOF
-```
-
-### Other Tools
-
-For any tool that supports custom system prompts or persistent instructions:
-
-1. Locate where your tool reads custom instructions (usually a dotfile in project root or home directory)
-2. Add the core instructions block above
-3. Ensure the tool can read files from `~/.workbench/.tmp/`
 
 ## Verification
 
-After adding the instructions:
+After adding instructions, test that they work:
 
-1. Start a new agent session
+1. Start a new session
 2. Ask: "What's in my active memory?"
-3. The agent should read `~/.workbench/.tmp/active-memory.md` and report its contents
-4. If the file doesn't exist yet, the agent should say so without error
+3. Agent should read `~/.workbench/.tmp/active-memory.md` and report contents
+4. If file doesn't exist, agent should say so without error
 
-## Without Hooks
+## Without Hooks (Manual Mode)
 
-If your tool doesn't support hooks (automatic triggering), you can still use workbench manually:
+If your tool doesn't support hooks, run these manually:
 
-- Run `/session-extract` periodically during long sessions (every 10-15 turns)
-- Run `/session-extract` at the end of each session
-- Run `/dream` after every 5-10 sessions to consolidate memory
+- `/session-extract` - Every 10-15 turns or at session end
+- `/dream` - After every 5-10 sessions
 
-The steering doc instructions above will still work for flag-based triggering if you set up hooks later.
+The steering doc instructions will still work for flag-based triggering if you set up hooks later.
+
+## Troubleshooting
+
+**Memory not loading:**
+- Verify file exists: `ls -la ~/.workbench/.tmp/active-memory.md`
+- Check file permissions: `cat ~/.workbench/.tmp/active-memory.md`
+- Ensure steering doc is in the correct location for your tool
+
+**Skills not triggering:**
+- Verify hooks are installed: `ls -la .github/hooks/`
+- Check hook permissions: `ls -la .github/hooks/copilot/*.sh`
+- Run `workbench doctor` to verify installation
+
+**Copilot CLI not using instructions:**
+- Ensure file is in current working directory
+- Try `AGENTS.md` if `.github/copilot-instructions.md` doesn't work
+- Check `~/.copilot/copilot-instructions.md` for global instructions
