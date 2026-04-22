@@ -184,10 +184,10 @@ export function createServer(deps: ServerDeps = {}): Server {
     try {
       switch (name) {
         case 'index_codebase': {
-          const { path: pathArg } = args as { path?: string; force?: boolean };
+          const { path: pathArg, force } = args as { path?: string; force?: boolean };
           const projectPath = pathArg ?? (await detectProjectRoot());
           const { idx, cfg } = await getIndexer(projectPath);
-          const result = await idx.index(projectPath);
+          const result = await idx.index(projectPath, undefined, force ?? false);
           lastStatus = { filesCount: result.filesIndexed, chunksCount: result.chunksIndexed };
 
           if (cfg.watchEnabled && !watcherStarted) {

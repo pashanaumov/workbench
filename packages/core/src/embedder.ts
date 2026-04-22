@@ -112,12 +112,18 @@ export class OllamaEmbedder implements Embedder {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly batchSize: number;
-  private _dimensions: number | null = null;
+  private _dimensions: number;
 
-  constructor(config: Pick<WorkbenchConfig, 'ollamaBaseUrl' | 'ollamaModel' | 'batchSize'>) {
+  constructor(
+    config: Pick<
+      WorkbenchConfig,
+      'ollamaBaseUrl' | 'ollamaModel' | 'batchSize' | 'ollamaDimensions'
+    >,
+  ) {
     this.baseUrl = config.ollamaBaseUrl;
     this.model = config.ollamaModel;
     this.batchSize = config.batchSize;
+    this._dimensions = config.ollamaDimensions;
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -131,9 +137,8 @@ export class OllamaEmbedder implements Embedder {
           body: JSON.stringify({ model: this.model, prompt: text }),
         });
         const data = (await response.json()) as { embedding: number[] };
-        if (this._dimensions === null) {
-          this._dimensions = data.embedding.length;
-        }
+        // Update dimensions from actual response (model may differ from default)
+        this._dimensions = data.embedding.length;
         results.push(data.embedding);
       }
     }
@@ -141,9 +146,6 @@ export class OllamaEmbedder implements Embedder {
   }
 
   get dimensions(): number {
-    if (this._dimensions === null) {
-      throw new Error('OllamaEmbedder: dimensions not yet known — call embed() first');
-    }
     return this._dimensions;
   }
 }

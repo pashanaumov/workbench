@@ -90,6 +90,7 @@ async function downloadFile(
 
   const ws = createWriteStream(destPath);
   const reader = response.body?.getReader();
+  if (!reader) throw new Error(`Download failed: response body is null for ${destPath}`);
 
   await new Promise<void>((resolve, reject) => {
     ws.on('finish', resolve);

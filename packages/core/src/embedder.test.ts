@@ -22,6 +22,7 @@ function baseConfig(overrides: Partial<WorkbenchConfig> = {}): WorkbenchConfig {
     openaiModel: 'text-embedding-3-small',
     ollamaBaseUrl: 'http://localhost:11434',
     ollamaModel: 'nomic-embed-text',
+    ollamaDimensions: 768,
     transformersModel: 'jinaai/jina-embeddings-v2-base-code',
     chunkMaxLines: 50,
     chunkOverlap: 0.2,
@@ -131,6 +132,7 @@ describe('OllamaEmbedder', () => {
       const embedder = new OllamaEmbedder({
         ollamaBaseUrl: 'http://localhost:11434',
         ollamaModel: 'nomic-embed-text',
+        ollamaDimensions: 768,
         batchSize: 32,
       });
       const result = await embedder.embed(['hello', 'world']);
@@ -143,13 +145,14 @@ describe('OllamaEmbedder', () => {
     }
   });
 
-  it('dimensions throws before first embed call', () => {
+  it('dimensions returns configured value before first embed call', () => {
     const embedder = new OllamaEmbedder({
       ollamaBaseUrl: 'http://localhost:11434',
       ollamaModel: 'nomic-embed-text',
+      ollamaDimensions: 768,
       batchSize: 32,
     });
-    assert.throws(() => embedder.dimensions, /dimensions not yet known/);
+    assert.equal(embedder.dimensions, 768);
   });
 });
 

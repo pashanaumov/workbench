@@ -52,6 +52,7 @@ describe('default config', () => {
     assert.equal(config.openaiModel, 'text-embedding-3-small');
     assert.equal(config.ollamaBaseUrl, 'http://localhost:11434');
     assert.equal(config.ollamaModel, 'nomic-embed-text');
+    assert.equal(config.ollamaDimensions, 768);
     assert.equal(config.transformersModel, 'jinaai/jina-embeddings-v2-base-code');
     assert.equal(config.chunkMaxLines, 50);
     assert.equal(config.chunkOverlap, 0.2);

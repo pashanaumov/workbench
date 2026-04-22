@@ -41,6 +41,7 @@ function makeConfig(indexDir: string): WorkbenchConfig {
     openaiModel: 'text-embedding-3-small',
     ollamaBaseUrl: 'http://localhost:11434',
     ollamaModel: 'nomic-embed-text',
+    ollamaDimensions: 768,
     transformersModel: 'jinaai/jina-embeddings-v2-base-code',
     chunkMaxLines: 50,
     chunkOverlap: 0.2,
