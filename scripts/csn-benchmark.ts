@@ -46,8 +46,9 @@ const ANNOTATION_CSV_URL =
 const HF_ROWS_API = 'https://datasets-server.huggingface.co/rows';
 const PAGE_SIZE = 100;
 const EVAL_K = 10;
+const RECALL_KS = [1, 3, 5] as const;
 // Fetch more results per query so we have headroom after deduplication.
-const SEARCH_OVERSAMPLE = EVAL_K * 3;
+const SEARCH_OVERSAMPLE = EVAL_K * 5;
 
 const CACHE_DIR = join(homedir(), '.workbench-csn-cache');
 const CORPUS_DIR = join(CACHE_DIR, 'corpus', LANGUAGE);
@@ -334,11 +335,43 @@ function computeNdcg(
   return dcgAtK(relList, k) / idcg;
 }
 
+/**
+ * Returns MRR: reciprocal rank of the first result with relevance > 0.
+ * Uses the full retrieved list (not capped at K) so MRR isn't artificially
+ * zero for queries where the first relevant item lands outside the top-10.
+ */
+function computeMrr(
+  retrievedUrls: Array<{ url: string; score: number }>,
+  annotations: Map<string, number>,
+): number {
+  for (let i = 0; i < retrievedUrls.length; i++) {
+    if ((annotations.get(retrievedUrls[i]?.url) ?? 0) > 0) return 1 / (i + 1);
+  }
+  return 0;
+}
+
+/**
+ * Returns 1 if at least one result in the top-K has relevance > 0, else 0.
+ * This is the "hit rate" / "success@K" variant of Recall, appropriate for
+ * sparsely-annotated datasets like CSN where only ~21 URLs are labelled per query.
+ */
+function computeRecallAtK(
+  retrievedUrls: Array<{ url: string; score: number }>,
+  annotations: Map<string, number>,
+  k: number,
+): number {
+  return retrievedUrls.slice(0, k).some((r) => (annotations.get(r.url) ?? 0) > 0) ? 1 : 0;
+}
+
 interface QueryResult {
   query: string;
   ndcg10: number;
   dcg10: number;
   idcg10: number;
+  mrr: number;
+  recall1: number;
+  recall3: number;
+  recall5: number;
   numAnnotations: number;
   results: Array<{ url: string; rank: number; relevance: number; score: number }>;
 }
@@ -356,7 +389,9 @@ async function runEval(annotations: AnnotationMap, _urlMap: Map<string, string>)
   const indexer = new Indexer(config, embedder, vectorStore, chunker);
 
   const queries = [...annotations.keys()];
-  log(`\n▶  Running ${queries.length} queries (NDCG@${EVAL_K})...`);
+  log(
+    `\n▶  Running ${queries.length} queries (NDCG@${EVAL_K}, MRR, Recall@${RECALL_KS.join('/')})...`,
+  );
 
   const queryResults: QueryResult[] = [];
   const ndcgScores: number[] = [];
@@ -381,14 +416,19 @@ async function runEval(annotations: AnnotationMap, _urlMap: Map<string, string>)
 
     const deduped = [...bestByUrl.entries()]
       .map(([url, score]) => ({ url, score }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, EVAL_K);
+      .sort((a, b) => b.score - a.score);
+    // Keep full list for MRR/Recall; slice to EVAL_K only for NDCG.
+    const dedupedTop = deduped.slice(0, EVAL_K);
 
     const qAnnotations = annotations.get(query) ?? new Map<string, number>();
-    const ndcg = computeNdcg(deduped, qAnnotations, EVAL_K);
+    const ndcg = computeNdcg(dedupedTop, qAnnotations, EVAL_K);
+    const mrr = computeMrr(deduped, qAnnotations);
+    const recall1 = computeRecallAtK(deduped, qAnnotations, 1);
+    const recall3 = computeRecallAtK(deduped, qAnnotations, 3);
+    const recall5 = computeRecallAtK(deduped, qAnnotations, 5);
 
     // Compute DCG/IDCG for the result record even when skipping
-    const relList = deduped.map((r) => qAnnotations.get(r.url) ?? 0);
+    const relList = dedupedTop.map((r) => qAnnotations.get(r.url) ?? 0);
     const idealRels = [...qAnnotations.values()].sort((a, b) => b - a).slice(0, EVAL_K);
 
     if (ndcg >= 0) ndcgScores.push(ndcg);
@@ -398,8 +438,12 @@ async function runEval(annotations: AnnotationMap, _urlMap: Map<string, string>)
       ndcg10: ndcg,
       dcg10: dcgAtK(relList, EVAL_K),
       idcg10: dcgAtK(idealRels, EVAL_K),
+      mrr,
+      recall1,
+      recall3,
+      recall5,
       numAnnotations: qAnnotations.size,
-      results: deduped.map((r, i) => ({
+      results: dedupedTop.map((r, i) => ({
         url: r.url,
         rank: i + 1,
         relevance: qAnnotations.get(r.url) ?? 0,
@@ -421,29 +465,42 @@ async function runEval(annotations: AnnotationMap, _urlMap: Map<string, string>)
   const skipped = queries.length - scored;
   const meanNdcg = scored > 0 ? ndcgScores.reduce((a, b) => a + b, 0) / scored : 0;
 
+  const scoredResults = queryResults.filter((r) => r.ndcg10 >= 0);
+  const n = scoredResults.length || 1;
+  const meanMrr = scoredResults.reduce((a, r) => a + r.mrr, 0) / n;
+  const meanRecalls = RECALL_KS.map(
+    (k) =>
+      scoredResults.reduce((a, r) => a + r[`recall${k}` as 'recall1' | 'recall3' | 'recall5'], 0) /
+      n,
+  );
+
   // Top / bottom 5 queries
-  const sorted = queryResults.filter((r) => r.ndcg10 >= 0).sort((a, b) => b.ndcg10 - a.ndcg10);
+  const sorted = scoredResults.sort((a, b) => b.ndcg10 - a.ndcg10);
   const top5 = sorted.slice(0, 5);
   const bot5 = sorted.slice(-5).reverse();
 
   log('\n═══════════════════════════════════════════════════════════════');
-  log(`  CodeSearchNet NDCG@${EVAL_K} — Python test split`);
+  log(`  CodeSearchNet Retrieval Metrics — Python test split`);
   log('═══════════════════════════════════════════════════════════════');
   log(
     `  Mean NDCG@${EVAL_K}:      ${meanNdcg.toFixed(4)}  (${scored} queries scored, ${skipped} skipped)`,
   );
+  log(`  MRR:             ${meanMrr.toFixed(4)}`);
+  for (let i = 0; i < RECALL_KS.length; i++) {
+    log(`  Recall@${RECALL_KS[i]}:        ${(meanRecalls[i] ?? 0).toFixed(4)}  (hit rate)`);
+  }
   log('');
-  log('  Baselines (CSN paper, Python):');
+  log('  Baselines (CSN paper, Python, NDCG@10):');
   log('    BM25                             0.1716');
   log('    NBOW (neural bag-of-words)       0.2602');
   log('    jina-embeddings-v2-base-code     ~0.35  (published)');
   log('');
-  log('  Top 5 queries:');
+  log('  Top 5 queries by NDCG@10:');
   for (const r of top5) {
     log(`    ${r.ndcg10.toFixed(4)}  "${r.query}"`);
   }
   log('');
-  log('  Bottom 5 queries:');
+  log('  Bottom 5 queries by NDCG@10:');
   for (const r of bot5) {
     log(`    ${r.ndcg10.toFixed(4)}  "${r.query}"`);
   }
