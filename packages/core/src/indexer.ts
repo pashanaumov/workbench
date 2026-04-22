@@ -102,6 +102,7 @@ export class Indexer {
     projectPath: string,
     onProgress?: ProgressCallback,
     force = false,
+    sourceUrlProvider?: (relPath: string) => string | undefined,
   ): Promise<IndexResult> {
     const startTime = Date.now();
     const absProjectPath = resolve(projectPath);
@@ -211,6 +212,7 @@ export class Indexer {
       header: c.chunk.header,
       body: c.chunk.body,
       embedText: c.chunk.embedText,
+      sourceUrl: sourceUrlProvider?.(c.chunk.filePath) ?? '',
       vector: vectors[i] ?? [],
     }));
 

@@ -16,6 +16,8 @@ export interface VectorRecord {
   header: string;
   body: string;
   embedText: string;
+  /** Optional back-link to the original source (e.g. GitHub URL). Used by the CSN benchmark. */
+  sourceUrl: string;
   vector: number[];
 }
 
@@ -27,6 +29,8 @@ export interface SearchResult {
   endLine: number;
   header: string;
   body: string;
+  /** Original source URL, if the record was indexed with one. Empty string otherwise. */
+  sourceUrl: string;
   score: number;
 }
 
@@ -157,6 +161,7 @@ function makeDummyRecord(dimensions: number): Record<string, unknown> {
     header: '',
     body: '',
     embedText: '',
+    sourceUrl: '',
     vector: new Array<number>(dimensions).fill(0),
   };
 }
@@ -179,6 +184,7 @@ function toSearchResult(row: Record<string, unknown>): SearchResult {
     endLine: row.endLine as number,
     header: row.header as string,
     body: row.body as string,
+    sourceUrl: (row.sourceUrl as string) ?? '',
     score,
   };
 }

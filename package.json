@@ -10,6 +10,7 @@
     "build:watch": "tsc --build --watch",
     "clean": "tsc --build --clean",
     "bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/benchmark.ts",
+    "csn-bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/csn-benchmark.ts",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests"
   },
   "devDependencies": {

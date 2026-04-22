@@ -33,6 +33,7 @@ function makeAuthChunk(n: 1 | 2): VectorRecord {
     header: `auth.ts > authenticateUser (function)`,
     body: `function authenticateUser(token: string) { /* jwt validation */ }`,
     embedText: `auth.ts > authenticateUser (function)\n\njwt authentication token login validation user password bearer`,
+    sourceUrl: '',
     vector:
       n === 1 ? [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.9, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
@@ -48,6 +49,7 @@ function makeDbChunk(n: 1 | 2): VectorRecord {
     header: `database.ts > queryPool (function)`,
     body: `function queryPool(sql: string) { /* connection pool */ }`,
     embedText: `database.ts > queryPool (function)\n\nsql query connection pool database transaction execute`,
+    sourceUrl: '',
     vector:
       n === 1 ? [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
@@ -63,6 +65,7 @@ function makeUiChunk(n: 1 | 2): VectorRecord {
     header: `ui.ts > renderComponent (function)`,
     body: `function renderComponent(props: Props) { /* react render */ }`,
     embedText: `ui.ts > renderComponent (function)\n\nreact component render view button state hook`,
+    sourceUrl: '',
     vector:
       n === 1 ? [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.0, 0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
@@ -269,6 +272,7 @@ describe('hybridSearch retrieval quality', () => {
     assert.ok(typeof r.endLine === 'number', 'endLine must be number');
     assert.ok(typeof r.header === 'string', 'header must be string');
     assert.ok(typeof r.body === 'string', 'body must be string');
+    assert.ok(typeof r.sourceUrl === 'string', 'sourceUrl must be string');
     assert.ok(typeof r.score === 'number', 'score must be number');
   });
 });
