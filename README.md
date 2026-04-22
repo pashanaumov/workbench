@@ -1,8 +1,10 @@
 # Workbench
 
-Portable, tool-agnostic agent enhancement primitives — skills, hooks, memory files, and config that work across any AI coding tool.
+Portable, tool-agnostic agent enhancement primitives — skills, hooks, memory files, config, and a production-ready workspace indexer that work across AI coding tools.
 
 Derived from Claude Code's `skillify`, `sessionMemory`, and `autoDream` systems, distilled into universal building blocks with no compilation step, no runtime dependency, and no tool-specific lock-in.
+
+✅ **Workspace indexing is ready to use now** via `workbench index`, `workbench search`, and `workbench status` (with optional MCP integration for Claude Code via `workbench indexer enable`).
 
 ## What's Inside
 
@@ -78,6 +80,23 @@ Or manually add the steering doc for tools without hooks (Cursor, Windsurf, Kiro
 
 ```
 /workbench setup
+```
+
+### Workspace Indexing (Ready Now)
+
+Index your project and run hybrid semantic + keyword search immediately:
+
+```bash
+workbench index .                    # Build or incrementally update index
+workbench search "auth token flow"   # Search code chunks by meaning + terms
+workbench status                     # Check index health for current project
+```
+
+For Claude Code MCP auto-integration:
+
+```bash
+workbench indexer enable             # Register workbench-indexer MCP server
+workbench indexer status             # Verify registration + project index state
 ```
 
 ## Core Capabilities
@@ -202,6 +221,13 @@ workbench doctor                    # Check installation health
 workbench print steering-doc        # Print steering doc snippet
 workbench install copilot [dir]     # Install Copilot hooks
 workbench copilot skills [--global] # Install skills to Copilot
+workbench index [path]              # Index codebase
+workbench search <query> [--top N]  # Search indexed code (semantic + keyword)
+workbench status                    # Show index status for current directory
+workbench clear                     # Remove current project's index
+workbench indexer enable [path]     # Register indexer MCP with Claude Code
+workbench indexer disable           # Disable indexer MCP
+workbench indexer status            # Show MCP registration + index state
 workbench mempalace status          # Check MemPalace status
 
 # Short alias: wb
