@@ -1,0 +1,31 @@
+{
+  "name": "@workbench/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "test": "node --experimental-strip-types --experimental-loader ./loader.mjs --test src/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.1.0",
+    "fast-glob": "^3.3.3",
+    "ignore": "^7.0.5",
+    "openai": "^6.34.0",
+    "p-limit": "^7.3.0",
+    "web-tree-sitter": "^0.26.8"
+  }
+}

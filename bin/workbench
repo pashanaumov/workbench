@@ -3,6 +3,27 @@ set -euo pipefail
 
 WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
 
+# Resolve path to the compiled wb CLI (packages/cli/dist/index.js).
+# Works both in-repo (bin/ next to packages/) and post-install
+# (~/.workbench/bin/ next to ~/.workbench/packages/).
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WB_CLI="${WB_CLI:-$_SCRIPT_DIR/../packages/cli/dist/index.js}"
+
+_run_indexer() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "Error: Node.js is required for indexer commands" >&2
+    echo "  Install Node.js >= 20 from https://nodejs.org" >&2
+    exit 1
+  fi
+  if [ ! -f "$WB_CLI" ]; then
+    echo "Error: Workbench indexer not built." >&2
+    echo "  Run from the workbench repo root:" >&2
+    echo "    pnpm install && pnpm run build" >&2
+    exit 1
+  fi
+  exec node "$WB_CLI" "$@"
+}
+
 cmd_doctor() {
   echo "Workbench Health Check"
   echo "======================"
@@ -217,6 +238,9 @@ case "${1:-}" in
   init)
     cmd_init
     ;;
+  index|status|search|clear)
+    _run_indexer "$@"
+    ;;
   *)
     echo "Workbench - Portable agent enhancement toolkit"
     echo ""
@@ -227,6 +251,12 @@ case "${1:-}" in
     echo "  workbench install copilot [dir]     Install Copilot hooks"
     echo "  workbench copilot skills [--global] Install skills to Copilot"
     echo "  workbench mempalace status          Check MemPalace status"
+    echo ""
+    echo "Indexer (requires Node.js):"
+    echo "  workbench index [path]              Index codebase"
+    echo "  workbench status                    Show indexer status"
+    echo "  workbench search <query>            Search the index"
+    echo "  workbench clear                     Clear the index"
     echo ""
     exit 1
     ;;

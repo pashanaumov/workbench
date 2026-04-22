@@ -4,3 +4,8 @@ session-memory/*.md
 
 # Development artifacts
 .kilo
+
+# TypeScript / Node
+node_modules/
+dist/
+*.tsbuildinfo
