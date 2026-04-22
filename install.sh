@@ -57,11 +57,13 @@ printf "\n"
 # Clone/copy files
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "bash" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/config.yaml" ]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin}
+  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
   cp -r "$SCRIPT_DIR/skills/"* "$TARGET/skills/"
   cp -r "$SCRIPT_DIR/hooks/"* "$TARGET/hooks/"
   cp -r "$SCRIPT_DIR/templates/"* "$TARGET/templates/"
   cp -r "$SCRIPT_DIR/bin/"* "$TARGET/bin/"
+  cp -r "$SCRIPT_DIR/packages/core" "$TARGET/packages/"
+  cp -r "$SCRIPT_DIR/packages/mcp" "$TARGET/packages/"
   cp "$SCRIPT_DIR/config.yaml" "$TARGET/config.yaml"
   cp "$SCRIPT_DIR/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
 else
@@ -80,11 +82,13 @@ else
     exit 1
   fi
   
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin}
+  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
   cp -r "$TMP_DIR/workbench/skills/"* "$TARGET/skills/"
   cp -r "$TMP_DIR/workbench/hooks/"* "$TARGET/hooks/"
   cp -r "$TMP_DIR/workbench/templates/"* "$TARGET/templates/"
   cp -r "$TMP_DIR/workbench/bin/"* "$TARGET/bin/"
+  cp -r "$TMP_DIR/workbench/packages/core" "$TARGET/packages/"
+  cp -r "$TMP_DIR/workbench/packages/mcp" "$TARGET/packages/"
   cp "$TMP_DIR/workbench/config.yaml" "$TARGET/config.yaml"
   cp "$TMP_DIR/workbench/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
 fi
