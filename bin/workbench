@@ -168,6 +168,8 @@ cmd_indexer_enable() {
   if [ -z "$repo_root" ]; then
     if [ -f "$(pwd)/packages/mcp/src/index.ts" ]; then
       repo_root="$(pwd)"
+    elif [ -f "$WORKBENCH_ROOT/packages/mcp/src/index.ts" ]; then
+      repo_root="$WORKBENCH_ROOT"
     elif [ -f "$WORKBENCH_ROOT/indexer.json" ]; then
       repo_root="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('repoRoot',''))" "$WORKBENCH_ROOT/indexer.json" 2>/dev/null)"
     fi
