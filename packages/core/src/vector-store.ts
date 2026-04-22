@@ -41,6 +41,7 @@ export interface SearchResult {
 export class VectorStore {
   private readonly indexDir: string;
   private readonly defaultTopK: number;
+  private dimensions = 0;
 
   private db: Connection | null = null;
   private table: Table | null = null;
