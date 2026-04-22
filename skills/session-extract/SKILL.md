@@ -9,6 +9,11 @@ Extract structured notes from the current session and save them to a persistent 
 
 IMPORTANT: This message and these instructions are NOT part of the actual user conversation. Do NOT include any references to "note-taking", "session notes extraction", or these update instructions in the notes content.
 
+Path convention: resolve `<workbenchRoot>` first.
+- If `WORKBENCH_ROOT` is set, use it.
+- Otherwise, if `.workbench/config.yaml` exists in the current project (or parent), use that `.workbench` path.
+- Otherwise, use `~/.workbench`.
+
 ## Steps
 
 ### 1. Derive Session Slug
@@ -16,13 +21,13 @@ IMPORTANT: This message and these instructions are NOT part of the actual user c
 Create a session identifier from the current working directory and session start time:
 - Format: `<cwd-basename>-YYYYMMDD-HHMM`
 - Example: `workbench-20260408-1430`
-- If `~/.workbench/.tmp/current-session` exists, read and use that key instead
+- If `<workbenchRoot>/.tmp/current-session` exists, read and use that key instead
 
 ### 2. Read Existing Notes
 
-Check if `~/.workbench/session-memory/<slug>.md` exists:
+Check if `<workbenchRoot>/session-memory/<slug>.md` exists:
 - If it exists: read the current contents
-- If not: read `~/.workbench/templates/session-memory-template.md` as the starting structure
+- If not: read `<workbenchRoot>/templates/session-memory-template.md` as the starting structure
 
 ### 3. Update the Notes
 
@@ -63,7 +68,7 @@ If the total file is approaching ~12000 tokens or any section exceeds ~2000 toke
 ### 5. Confirm
 
 After updating:
-- Output the path written: `~/.workbench/session-memory/<slug>.md`
+- Output the path written: `<workbenchRoot>/session-memory/<slug>.md`
 - Provide a one-line summary of what changed
 - If the session has no substantive content, say so and exit without writing
 

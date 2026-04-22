@@ -27,8 +27,11 @@ fi
 # Read JSON input from stdin
 INPUT=$(cat)
 
+# Parse fields (Copilot passes: cwd)
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || echo "")
+
 # Workbench root
-WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
+WORKBENCH_ROOT="$(resolve_workbench_root "$CWD")"
 
 # Read session key
 SESSION_KEY_FILE="$WORKBENCH_ROOT/.tmp/current-session"

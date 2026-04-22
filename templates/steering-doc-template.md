@@ -2,6 +2,11 @@
 
 Add these instructions to your AI tool's configuration to enable automatic memory loading and skill execution.
 
+When these instructions reference `<workbenchRoot>`, resolve it in this order:
+1. Use `WORKBENCH_ROOT` if set.
+2. Else use `.workbench` in the current project (or nearest parent with `.workbench/config.yaml`).
+3. Else use `~/.workbench`.
+
 ## For GitHub Copilot (Cloud Agent & CLI)
 
 ### Cloud Agent Setup
@@ -12,23 +17,23 @@ Add to `.github/copilot-instructions.md` in your repository (must be on default 
 ## Workbench Memory System
 
 **On every session start (automatic, silent):**
-1. Silently run: `cat ~/.workbench/.tmp/active-memory.md 2>/dev/null`
+1. Silently run: `cat <workbenchRoot>/.tmp/active-memory.md 2>/dev/null`
 2. If file exists and has content, load it into context without announcing
 3. This memory is now part of your working context for the session
 4. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected and helpful for debugging
 
 **After every tool execution (automatic, silent):**
-1. Silently check: `test -f ~/.workbench/.tmp/extract-pending && echo "EXTRACT_PENDING"`
+1. Silently check: `test -f <workbenchRoot>/.tmp/extract-pending && echo "EXTRACT_PENDING"`
 2. If output is "EXTRACT_PENDING":
    - Silently run the `/session-extract` skill
-   - Silently run: `rm ~/.workbench/.tmp/extract-pending`
+   - Silently run: `rm <workbenchRoot>/.tmp/extract-pending`
 3. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected
 
 **On session end (automatic, silent):**
-1. Silently check: `test -f ~/.workbench/.tmp/dream-pending && echo "DREAM_PENDING"`
+1. Silently check: `test -f <workbenchRoot>/.tmp/dream-pending && echo "DREAM_PENDING"`
 2. If output is "DREAM_PENDING":
    - Silently run the `/dream` skill
-   - Silently run: `rm ~/.workbench/.tmp/dream-pending`
+   - Silently run: `rm <workbenchRoot>/.tmp/dream-pending`
 3. Note: Hook output (🔧/✅ emojis) will appear in stderr - this is expected
 
 **Important:** 
@@ -57,15 +62,15 @@ Add to `.cursorrules` or `.windsurfrules` in project root:
 ## Workbench Memory System
 
 **On every session start (automatic, silent):**
-1. Silently read `~/.workbench/.tmp/active-memory.md`
+1. Silently read `<workbenchRoot>/.tmp/active-memory.md`
 2. If file exists and has content, load it into context without announcing
 3. This memory is now part of your working context for the session
 
 **Check for pending tasks (automatic, silent):**
-1. If `~/.workbench/.tmp/extract-pending` exists:
+1. If `<workbenchRoot>/.tmp/extract-pending` exists:
    - Silently run `/session-extract` skill
    - Delete the flag file
-2. If `~/.workbench/.tmp/dream-pending` exists:
+2. If `<workbenchRoot>/.tmp/dream-pending` exists:
    - Silently run `/dream` skill
    - Delete the flag file
 
@@ -75,7 +80,7 @@ Add to `.cursorrules` or `.windsurfrules` in project root:
 - Never announce "Loading memory" or "Running extract" in chat unless the user explicitly asks about workbench status
 ```
 
-## For Kilo / Claude Code
+## For Kiro / Claude Code
 
 Add to `AGENTS.md` in project root:
 
@@ -83,15 +88,15 @@ Add to `AGENTS.md` in project root:
 ## Workbench Memory System
 
 **On every session start (automatic, silent):**
-1. Silently read `~/.workbench/.tmp/active-memory.md`
+1. Silently read `<workbenchRoot>/.tmp/active-memory.md`
 2. If file exists and has content, load it into context without announcing
 3. This memory is now part of your working context for the session
 
 **Check for pending tasks (automatic, silent):**
-1. If `~/.workbench/.tmp/extract-pending` exists:
+1. If `<workbenchRoot>/.tmp/extract-pending` exists:
    - Silently run `/session-extract` skill
    - Delete the flag file
-2. If `~/.workbench/.tmp/dream-pending` exists:
+2. If `<workbenchRoot>/.tmp/dream-pending` exists:
    - Silently run `/dream` skill
    - Delete the flag file
 
@@ -107,7 +112,7 @@ After adding instructions, test that they work:
 
 1. Start a new session
 2. Memory loads automatically and silently in the background
-3. To verify it's working, check the file: `cat ~/.workbench/.tmp/active-memory.md`
+3. To verify it's working, check the file: `cat <workbenchRoot>/.tmp/active-memory.md`
 4. Or ask the agent: "What preferences or context do you have about me?"
 5. The agent should have access to your memory without you explicitly loading it
 
@@ -123,8 +128,8 @@ The steering doc instructions will still work for flag-based triggering if you s
 ## Troubleshooting
 
 **Memory not loading:**
-- Verify file exists: `ls -la ~/.workbench/.tmp/active-memory.md`
-- Check file permissions: `cat ~/.workbench/.tmp/active-memory.md`
+- Verify file exists: `ls -la <workbenchRoot>/.tmp/active-memory.md`
+- Check file permissions: `cat <workbenchRoot>/.tmp/active-memory.md`
 - Ensure steering doc is in the correct location for your tool
 
 **Skills not triggering:**

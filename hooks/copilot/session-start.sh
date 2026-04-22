@@ -29,7 +29,7 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || echo "")
 TIMESTAMP=$(echo "$INPUT" | jq -r '.timestamp // empty' 2>/dev/null || echo "")
 
 # Workbench root
-WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
+WORKBENCH_ROOT="$(resolve_workbench_root "$CWD")"
 
 echo "🔧 [Workbench] Loading memory from $WORKBENCH_ROOT" >&2
 

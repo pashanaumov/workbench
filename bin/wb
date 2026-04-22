@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# wb - Short alias for workbench
-exec "$(dirname "$0")/workbench" "$@"

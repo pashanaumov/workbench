@@ -21,14 +21,14 @@ export async function searchCmd(rawArgs: string[]): Promise<void> {
 
   const query = positionals.join(' ');
   if (!query.trim()) {
-    console.error('wb search: query is required');
-    console.error('Usage: wb search <query> [--top N]');
+    console.error('workbench search: query is required');
+    console.error('Usage: workbench search <query> [--top N]');
     process.exit(1);
   }
 
   const topK = parseInt(values.top ?? '5', 10);
   if (Number.isNaN(topK) || topK < 1) {
-    console.error('wb search: --top must be a positive integer');
+    console.error('workbench search: --top must be a positive integer');
     process.exit(1);
   }
 
@@ -46,7 +46,7 @@ export async function searchCmd(rawArgs: string[]): Promise<void> {
   } catch (err) {
     const msg = (err as Error).message ?? String(err);
     if (msg.includes('ENOENT') || msg.includes('not found') || msg.includes('No such')) {
-      console.log('No index found. Run `wb index` first.');
+      console.log('No index found. Run `workbench index` first.');
       return;
     }
     throw err;

@@ -12,11 +12,22 @@ set -euo pipefail
 
 echo "🔧 [Workbench] Tool executed, checking extraction threshold..." >&2
 
+# Get script directory for sourcing helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source detection helpers
+if [ -f "$SCRIPT_DIR/lib/detect.sh" ]; then
+  source "$SCRIPT_DIR/lib/detect.sh"
+fi
+
 # Read JSON input from stdin
 INPUT=$(cat)
 
+# Parse fields (Copilot passes: cwd)
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || echo "")
+
 # Workbench root
-WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
+WORKBENCH_ROOT="$(resolve_workbench_root "$CWD")"
 
 # Config default
 MIN_TOOL_CALLS=3

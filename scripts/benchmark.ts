@@ -395,7 +395,7 @@ Examples:
     const msg = (err as Error).message ?? String(err);
     if (msg.includes('ENOENT') || msg.includes('not found') || msg.includes('No such')) {
       console.error(c.red(`\nError: no index found for ${projectPath}`));
-      console.error(c.yellow(`  Run: wb index ${projectPath}`));
+      console.error(c.yellow(`  Run: workbench index ${projectPath}`));
       process.exit(1);
     }
     // Other errors — let them surface naturally

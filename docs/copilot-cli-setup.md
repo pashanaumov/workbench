@@ -2,6 +2,11 @@
 
 This guide covers setting up workbench with GitHub Copilot CLI (`gh copilot`).
 
+In this guide, `<workbenchRoot>` means:
+1. `WORKBENCH_ROOT` (if set)
+2. `.workbench` in the current project (or nearest parent)
+3. `~/.workbench` fallback
+
 ## Key Differences from Cloud Agent
 
 | Feature | Cloud Agent | CLI |
@@ -20,8 +25,8 @@ curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.
 ```
 
 The installer will:
-- Install to `~/.workbench/`
-- Add to your PATH
+- Install to a chosen root (`~/.workbench` or `.workbench`)
+- Add to your PATH (global install only)
 - Prompt for MemPalace integration
 
 ### 2. Install Hooks (Optional but Recommended)
@@ -73,7 +78,7 @@ workbench doctor
 gh copilot
 
 # Ask: "What's in my active memory?"
-# Agent should read ~/.workbench/.tmp/active-memory.md
+# Agent should read <workbenchRoot>/.tmp/active-memory.md
 ```
 
 ## How It Works
@@ -81,7 +86,7 @@ gh copilot
 ### Session Flow
 
 1. **Session starts** → `session-start.sh` runs
-   - Loads `~/.workbench/.tmp/active-memory.md`
+   - Loads `<workbenchRoot>/.tmp/active-memory.md`
    - Checks if dream consolidation is needed
    - Resets tool counter
 
@@ -155,12 +160,12 @@ workbench print steering-doc > ~/.copilot/copilot-instructions.md
 
 **Check active memory file:**
 ```bash
-cat ~/.workbench/.tmp/active-memory.md
+cat <workbenchRoot>/.tmp/active-memory.md
 ```
 
 **Verify session-start hook ran:**
 ```bash
-ls -la ~/.workbench/.tmp/current-session
+ls -la <workbenchRoot>/.tmp/current-session
 ```
 
 **Run hook manually to test:**
@@ -172,12 +177,12 @@ echo '{"cwd":"'$(pwd)'","timestamp":'$(date +%s)'}' | .github/hooks/copilot/sess
 
 **Check for pending flags:**
 ```bash
-ls -la ~/.workbench/.tmp/*-pending
+ls -la <workbenchRoot>/.tmp/*-pending
 ```
 
 **Verify skills exist:**
 ```bash
-ls -la ~/.workbench/skills/
+ls -la <workbenchRoot>/skills/
 ```
 
 **Test skill manually:**
@@ -190,7 +195,7 @@ ls -la ~/.workbench/skills/
 
 ### Change tool call threshold
 
-Edit `~/.workbench/config.yaml`:
+Edit `<workbenchRoot>/config.yaml`:
 
 ```yaml
 session_extract:

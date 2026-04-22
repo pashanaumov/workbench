@@ -2,6 +2,11 @@
 
 Workbench hooks now output visible messages to stderr, mimicking Claude Code's hook execution feedback.
 
+In this guide, `<workbenchRoot>` means:
+1. `WORKBENCH_ROOT` (if set)
+2. `.workbench` in the current project (or nearest parent)
+3. `~/.workbench` fallback
+
 ## Hook Messages
 
 All hooks output messages to stderr (visible in terminal/console):
@@ -9,7 +14,7 @@ All hooks output messages to stderr (visible in terminal/console):
 ### Session Start Hook
 ```
 🔧 [Workbench] Session starting...
-🔧 [Workbench] Loading memory from ~/.workbench
+🔧 [Workbench] Loading memory from <workbenchRoot>
 ✅ [Workbench] Session started successfully
 ```
 
@@ -48,7 +53,7 @@ Hook output appears directly in your terminal:
 gh copilot
 # You'll see:
 # 🔧 [Workbench] Session starting...
-# 🔧 [Workbench] Loading memory from ~/.workbench
+# 🔧 [Workbench] Loading memory from <workbenchRoot>
 # ✅ [Workbench] Session started successfully
 ```
 
@@ -82,7 +87,7 @@ echo '{"cwd":"'$(pwd)'","timestamp":'$(date +%s)'}' | \
 export WORKBENCH_DEBUG=1
 
 # Check if hooks ran
-ls -la ~/.workbench/.tmp/
+ls -la <workbenchRoot>/.tmp/
 # Should see: current-session, active-memory.md, tool-count-*, etc.
 ```
 
@@ -180,12 +185,12 @@ echo '{"cwd":"'$(pwd)'","timestamp":'$(date +%s)'}' | \
 
 **Check active-memory.md:**
 ```bash
-cat ~/.workbench/.tmp/active-memory.md
+cat <workbenchRoot>/.tmp/active-memory.md
 ```
 
 **Check session-start hook ran:**
 ```bash
-cat ~/.workbench/.tmp/current-session
+cat <workbenchRoot>/.tmp/current-session
 # Should show session key like: myproject-12345678
 ```
 

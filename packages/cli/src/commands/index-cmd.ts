@@ -25,7 +25,7 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
   });
 
   if (values.help) {
-    console.log('Usage: wb index [path] [options]');
+    console.log('Usage: workbench index [path] [options]');
     console.log('');
     console.log('Index a project into the local vector store.');
     console.log('');
@@ -42,7 +42,7 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
   if (values.embedder) {
     if (!['openai', 'transformers', 'ollama'].includes(values.embedder)) {
       console.error(
-        `wb: unknown embedder '${values.embedder}' (choose: openai, transformers, ollama)`,
+        `workbench: unknown embedder '${values.embedder}' (choose: openai, transformers, ollama)`,
       );
       process.exit(1);
     }

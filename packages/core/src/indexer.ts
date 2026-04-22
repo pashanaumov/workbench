@@ -271,7 +271,7 @@ export class Indexer {
 
     await saveManifest(manifestFilePath, finalManifest);
 
-    // Write stats.json so `wb status` and MCP `get_indexing_status` can report persistent state.
+    // Write stats.json so `workbench status` and MCP `get_indexing_status` can report persistent state.
     const statsPath = join(this.config.indexDir, 'stats.json');
     await mkdir(this.config.indexDir, { recursive: true });
     await writeFile(

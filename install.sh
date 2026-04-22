@@ -17,10 +17,245 @@ STEP="◆"
 CHECK="✔"
 ARROW="→"
 
+NON_INTERACTIVE=false
+TARGET_ARG=""
+AGENT_CHOICE=""
+INTEGRATION_SCOPE=""
+MEMPALACE_CHOICE=""
+
+print_usage() {
+  cat <<'EOF'
+Usage: install.sh [target] [options]
+
+Options:
+  --target <path>                 Install root path (same as positional target)
+  --non-interactive, --yes        Run without prompts (defaults: global root, mempalace=later, agent=skip)
+  --mempalace <yes|no|later>      MemPalace integration choice
+  --agent <name>                  Agent integration target: universal|copilot|cursor|windsurf|kiro|skip
+  --scope <project|global>        Agent integration scope (when --agent is not skip)
+  -h, --help                      Show this help
+EOF
+}
+
+normalize_mempalace_choice() {
+  case "${1:-}" in
+    y|Y|yes|Yes|YES) printf 'yes\n' ;;
+    n|N|no|No|NO) printf 'no\n' ;;
+    ""|later|Later|LATER) printf 'later\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+normalize_agent_choice() {
+  case "${1:-}" in
+    1|universal) printf '1\n' ;;
+    2|copilot) printf '2\n' ;;
+    3|cursor) printf '3\n' ;;
+    4|windsurf) printf '4\n' ;;
+    5|kiro) printf '5\n' ;;
+    6|skip|"") printf '6\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+normalize_scope_choice() {
+  case "${1:-}" in
+    1|project|"") printf '1\n' ;;
+    2|global) printf '2\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+parse_args() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        print_usage
+        exit 0
+        ;;
+      --non-interactive|--yes)
+        NON_INTERACTIVE=true
+        shift
+        ;;
+      --target)
+        if [ $# -lt 2 ]; then
+          echo "Error: --target requires a path" >&2
+          exit 1
+        fi
+        TARGET_ARG="$2"
+        shift 2
+        ;;
+      --target=*)
+        TARGET_ARG="${1#*=}"
+        shift
+        ;;
+      --mempalace)
+        if [ $# -lt 2 ]; then
+          echo "Error: --mempalace requires yes|no|later" >&2
+          exit 1
+        fi
+        if ! MEMPALACE_CHOICE="$(normalize_mempalace_choice "$2")"; then
+          echo "Error: invalid --mempalace value '$2'" >&2
+          exit 1
+        fi
+        shift 2
+        ;;
+      --mempalace=*)
+        if ! MEMPALACE_CHOICE="$(normalize_mempalace_choice "${1#*=}")"; then
+          echo "Error: invalid --mempalace value '${1#*=}'" >&2
+          exit 1
+        fi
+        shift
+        ;;
+      --agent)
+        if [ $# -lt 2 ]; then
+          echo "Error: --agent requires universal|copilot|cursor|windsurf|kiro|skip" >&2
+          exit 1
+        fi
+        if ! AGENT_CHOICE="$(normalize_agent_choice "$2")"; then
+          echo "Error: invalid --agent value '$2'" >&2
+          exit 1
+        fi
+        shift 2
+        ;;
+      --agent=*)
+        if ! AGENT_CHOICE="$(normalize_agent_choice "${1#*=}")"; then
+          echo "Error: invalid --agent value '${1#*=}'" >&2
+          exit 1
+        fi
+        shift
+        ;;
+      --scope)
+        if [ $# -lt 2 ]; then
+          echo "Error: --scope requires project|global" >&2
+          exit 1
+        fi
+        if ! INTEGRATION_SCOPE="$(normalize_scope_choice "$2")"; then
+          echo "Error: invalid --scope value '$2'" >&2
+          exit 1
+        fi
+        shift 2
+        ;;
+      --scope=*)
+        if ! INTEGRATION_SCOPE="$(normalize_scope_choice "${1#*=}")"; then
+          echo "Error: invalid --scope value '${1#*=}'" >&2
+          exit 1
+        fi
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        echo "Error: unknown option '$1'" >&2
+        print_usage >&2
+        exit 1
+        ;;
+      *)
+        if [ -z "$TARGET_ARG" ]; then
+          TARGET_ARG="$1"
+        else
+          echo "Error: unexpected argument '$1'" >&2
+          print_usage >&2
+          exit 1
+        fi
+        shift
+        ;;
+    esac
+  done
+}
+
+copy_workbench_files() {
+  local source_root="$1"
+  local target_root="$2"
+
+  mkdir -p "$target_root"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
+  cp -r "$source_root/skills/"* "$target_root/skills/"
+  cp -r "$source_root/hooks/"* "$target_root/hooks/"
+  cp -r "$source_root/templates/"* "$target_root/templates/"
+  cp -r "$source_root/bin/"* "$target_root/bin/"
+  cp -r "$source_root/packages/core" "$target_root/packages/"
+  cp -r "$source_root/packages/mcp" "$target_root/packages/"
+  cp -r "$source_root/packages/cli" "$target_root/packages/"
+  cp "$source_root/config.yaml" "$target_root/config.yaml"
+  cp "$source_root/memory/MEMORY.md" "$target_root/memory/MEMORY.md"
+
+  for file in package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json; do
+    if [ -f "$source_root/$file" ]; then
+      cp "$source_root/$file" "$target_root/$file"
+    fi
+  done
+}
+
+bootstrap_indexer_runtime() {
+  local target_root="$1"
+
+  if [ ! -f "$target_root/package.json" ] || [ ! -f "$target_root/pnpm-workspace.yaml" ]; then
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    printf "${DIM}${BAR}${RESET}  ${YELLOW}○${RESET} Indexer runtime not prepared ${DIM}(Node.js not found)${RESET}\n"
+    return 0
+  fi
+
+  local launcher=""
+  if command -v pnpm >/dev/null 2>&1; then
+    launcher="pnpm"
+  elif command -v corepack >/dev/null 2>&1; then
+    launcher="corepack"
+  else
+    printf "${DIM}${BAR}${RESET}  ${YELLOW}○${RESET} Indexer runtime not prepared ${DIM}(pnpm/corepack not found)${RESET}\n"
+    printf "${DIM}${BAR}${RESET}    ${DIM}Run later: cd \"$target_root\" && corepack pnpm install && corepack pnpm run build${RESET}\n"
+    return 0
+  fi
+
+  printf "${CYAN}${STEP}${RESET}  Indexer Runtime\n"
+  printf "${DIM}${BAR}${RESET}\n"
+  printf "${DIM}${BAR}${RESET}  Installing indexer dependencies...\n"
+  if [ "$launcher" = "pnpm" ]; then
+    if ! (cd "$target_root" && pnpm install --frozen-lockfile >/dev/null 2>&1); then
+      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to install indexer dependencies\n"
+      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && pnpm install && pnpm run build${RESET}\n"
+      printf "\n"
+      return 0
+    fi
+    if ! (cd "$target_root" && pnpm run build >/dev/null 2>&1); then
+      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to build indexer packages\n"
+      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && pnpm run build${RESET}\n"
+      printf "\n"
+      return 0
+    fi
+  else
+    if ! (cd "$target_root" && corepack pnpm install --frozen-lockfile >/dev/null 2>&1); then
+      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to install indexer dependencies\n"
+      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && corepack pnpm install && corepack pnpm run build${RESET}\n"
+      printf "\n"
+      return 0
+    fi
+    if ! (cd "$target_root" && corepack pnpm run build >/dev/null 2>&1); then
+      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to build indexer packages\n"
+      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && corepack pnpm run build${RESET}\n"
+      printf "\n"
+      return 0
+    fi
+  fi
+
+  printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Indexer runtime ready\n"
+  printf "\n"
+}
+
 printf "\n"
 
+parse_args "$@"
+
 # If target not provided, ask user
-if [ -z "${1:-}" ]; then
+if [ -z "$TARGET_ARG" ]; then
+  if [ "$NON_INTERACTIVE" = true ]; then
+    TARGET="$HOME/.workbench"
+    printf "${GREEN}${CHECK}${RESET}  Installing globally to ${CYAN}$TARGET${RESET}\n"
+  else
   printf "${CYAN}${STEP}${RESET}  Where would you like to install workbench?\n"
   printf "${DIM}${BAR}${RESET}\n"
   printf "${DIM}${BAR}${RESET}  ${BOLD}1${RESET}  Global ${DIM}(~/.workbench)${RESET}\n"
@@ -47,25 +282,18 @@ if [ -z "${1:-}" ]; then
       printf "${GREEN}${CHECK}${RESET}  Installing globally to ${CYAN}$TARGET${RESET}\n"
       ;;
   esac
+  fi
 else
-  TARGET="$1"
+  TARGET="$TARGET_ARG"
   printf "${GREEN}${CHECK}${RESET}  Installing to ${CYAN}$TARGET${RESET}\n"
 fi
 
 printf "\n"
 
 # Clone/copy files
+SOURCE_ROOT=""
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "bash" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/config.yaml" ]; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
-  cp -r "$SCRIPT_DIR/skills/"* "$TARGET/skills/"
-  cp -r "$SCRIPT_DIR/hooks/"* "$TARGET/hooks/"
-  cp -r "$SCRIPT_DIR/templates/"* "$TARGET/templates/"
-  cp -r "$SCRIPT_DIR/bin/"* "$TARGET/bin/"
-  cp -r "$SCRIPT_DIR/packages/core" "$TARGET/packages/"
-  cp -r "$SCRIPT_DIR/packages/mcp" "$TARGET/packages/"
-  cp "$SCRIPT_DIR/config.yaml" "$TARGET/config.yaml"
-  cp "$SCRIPT_DIR/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
+  SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 else
   if ! command -v git >/dev/null 2>&1; then
     printf "${DIM}${BAR}${RESET}\n"
@@ -81,22 +309,17 @@ else
     printf "${DIM}└${RESET}  skills directory not found after clone\n\n"
     exit 1
   fi
-  
-  mkdir -p "$TARGET"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
-  cp -r "$TMP_DIR/workbench/skills/"* "$TARGET/skills/"
-  cp -r "$TMP_DIR/workbench/hooks/"* "$TARGET/hooks/"
-  cp -r "$TMP_DIR/workbench/templates/"* "$TARGET/templates/"
-  cp -r "$TMP_DIR/workbench/bin/"* "$TARGET/bin/"
-  cp -r "$TMP_DIR/workbench/packages/core" "$TARGET/packages/"
-  cp -r "$TMP_DIR/workbench/packages/mcp" "$TARGET/packages/"
-  cp "$TMP_DIR/workbench/config.yaml" "$TARGET/config.yaml"
-  cp "$TMP_DIR/workbench/memory/MEMORY.md" "$TARGET/memory/MEMORY.md"
+  SOURCE_ROOT="$TMP_DIR/workbench"
 fi
+
+copy_workbench_files "$SOURCE_ROOT" "$TARGET"
 
 find "$TARGET/hooks" -name "*.sh" -type f -exec chmod +x {} \;
 chmod +x "$TARGET/bin/"*
 touch "$TARGET/memory/.gitkeep"
 touch "$TARGET/session-memory/.gitkeep"
+
+bootstrap_indexer_runtime "$TARGET"
 
 # MemPalace integration
 printf "${CYAN}${STEP}${RESET}  MemPalace Integration\n"
@@ -107,17 +330,31 @@ printf "${DIM}${BAR}${RESET}\n"
 if command -v mempalace >/dev/null 2>&1; then
   printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} MemPalace installed at ${CYAN}$(command -v mempalace)${RESET}\n"
   printf "${DIM}${BAR}${RESET}\n"
-  printf "${GREEN}?${RESET}  Enable MemPalace? ${DIM}(y/n/later) [later]${RESET} ${ARROW} "
-  read MEMPALACE_CHOICE </dev/tty
-  MEMPALACE_CHOICE=${MEMPALACE_CHOICE:-later}
+  if [ -z "$MEMPALACE_CHOICE" ]; then
+    if [ "$NON_INTERACTIVE" = true ]; then
+      MEMPALACE_CHOICE="later"
+    else
+      printf "${GREEN}?${RESET}  Enable MemPalace? ${DIM}(y/n/later) [later]${RESET} ${ARROW} "
+      read MEMPALACE_CHOICE </dev/tty
+      MEMPALACE_CHOICE="${MEMPALACE_CHOICE:-later}"
+      MEMPALACE_CHOICE="$(normalize_mempalace_choice "$MEMPALACE_CHOICE" || echo "later")"
+    fi
+  fi
 else
   printf "${DIM}${BAR}${RESET}  ${YELLOW}○${RESET} MemPalace not installed\n"
   printf "${DIM}${BAR}${RESET}\n"
-  printf "${GREEN}?${RESET}  Install MemPalace? ${DIM}(y/n/later) [later]${RESET} ${ARROW} "
-  read MEMPALACE_CHOICE </dev/tty
-  MEMPALACE_CHOICE=${MEMPALACE_CHOICE:-later}
+  if [ -z "$MEMPALACE_CHOICE" ]; then
+    if [ "$NON_INTERACTIVE" = true ]; then
+      MEMPALACE_CHOICE="later"
+    else
+      printf "${GREEN}?${RESET}  Install MemPalace? ${DIM}(y/n/later) [later]${RESET} ${ARROW} "
+      read MEMPALACE_CHOICE </dev/tty
+      MEMPALACE_CHOICE="${MEMPALACE_CHOICE:-later}"
+      MEMPALACE_CHOICE="$(normalize_mempalace_choice "$MEMPALACE_CHOICE" || echo "later")"
+    fi
+  fi
   
-  if [[ "$MEMPALACE_CHOICE" =~ ^[yY]([eE][sS])?$ ]]; then
+  if [ "$MEMPALACE_CHOICE" = "yes" ]; then
     printf "${DIM}${BAR}${RESET}\n"
     printf "${DIM}${BAR}${RESET}  Installing MemPalace...\n"
     
@@ -146,11 +383,11 @@ else
 fi
 
 case "$MEMPALACE_CHOICE" in
-  y|Y|yes|Yes|YES)
+  yes)
     sed -i.bak 's/enabled: auto/enabled: true/' "$TARGET/config.yaml" && rm "$TARGET/config.yaml.bak"
     printf "${DIM}${BAR}${RESET}  ${ARROW} Enabled\n"
     ;;
-  n|N|no|No|NO)
+  no)
     sed -i.bak 's/enabled: auto/enabled: false/' "$TARGET/config.yaml" && rm "$TARGET/config.yaml.bak"
     printf "${DIM}${BAR}${RESET}  ${ARROW} Disabled\n"
     ;;
@@ -208,9 +445,16 @@ printf "${DIM}${BAR}${RESET}  ${BOLD}4${RESET}  Windsurf\n"
 printf "${DIM}${BAR}${RESET}  ${BOLD}5${RESET}  Kiro / Claude Code\n"
 printf "${DIM}${BAR}${RESET}  ${BOLD}6${RESET}  Skip\n"
 printf "${DIM}${BAR}${RESET}\n"
-printf "${GREEN}?${RESET}  Choose ${DIM}[1-6] (default: 1)${RESET} ${ARROW} "
-read AGENT_CHOICE </dev/tty
-AGENT_CHOICE=${AGENT_CHOICE:-1}
+if [ -z "$AGENT_CHOICE" ]; then
+  if [ "$NON_INTERACTIVE" = true ]; then
+    AGENT_CHOICE="6"
+    printf "${DIM}${BAR}${RESET}  ${ARROW} Skipped (non-interactive)\n"
+  else
+    printf "${GREEN}?${RESET}  Choose ${DIM}[1-6] (default: 1)${RESET} ${ARROW} "
+    read AGENT_CHOICE </dev/tty
+    AGENT_CHOICE="${AGENT_CHOICE:-1}"
+  fi
+fi
 
 STEERING_DOC_FILE=""
 SKILLS_DIR=""
@@ -237,9 +481,16 @@ if [ -n "$SKILLS_DIR" ]; then
   printf "${DIM}${BAR}${RESET}  ${BOLD}1${RESET}  Project ${DIM}(current directory)${RESET}\n"
   printf "${DIM}${BAR}${RESET}  ${BOLD}2${RESET}  Global ${DIM}(home directory)${RESET}\n"
   printf "${DIM}${BAR}${RESET}\n"
-  printf "${GREEN}?${RESET}  Choose ${DIM}[1-2] (default: 1)${RESET} ${ARROW} "
-  read INTEGRATION_SCOPE </dev/tty
-  INTEGRATION_SCOPE=${INTEGRATION_SCOPE:-1}
+  if [ -z "$INTEGRATION_SCOPE" ]; then
+    if [ "$NON_INTERACTIVE" = true ]; then
+      INTEGRATION_SCOPE="1"
+      printf "${DIM}${BAR}${RESET}  ${ARROW} Project (non-interactive)\n"
+    else
+      printf "${GREEN}?${RESET}  Choose ${DIM}[1-2] (default: 1)${RESET} ${ARROW} "
+      read INTEGRATION_SCOPE </dev/tty
+      INTEGRATION_SCOPE=${INTEGRATION_SCOPE:-1}
+    fi
+  fi
 
   if [ "$INTEGRATION_SCOPE" = "2" ]; then
     # Global agent integration
@@ -286,5 +537,5 @@ if [ -n "$SKILLS_DIR" ]; then
 fi
 
 printf "\n"
-printf "${BOLD}Done!${RESET} ${DIM}Run${RESET} ${CYAN}wb doctor${RESET} ${DIM}to verify.${RESET}\n"
+printf "${BOLD}Done!${RESET} ${DIM}Run${RESET} ${CYAN}workbench doctor${RESET} ${DIM}to verify.${RESET}\n"
 printf "\n"

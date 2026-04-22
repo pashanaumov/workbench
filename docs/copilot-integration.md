@@ -5,6 +5,11 @@ Workbench integrates with GitHub Copilot through **two complementary mechanisms*
 1. **Skills** - Make workbench commands available to Copilot
 2. **Hooks** - Automate memory loading and session management
 
+In this guide, `<workbenchRoot>` means:
+1. `WORKBENCH_ROOT` (if set)
+2. `.workbench` in the current project (or nearest parent)
+3. `~/.workbench` fallback
+
 ## Quick Start
 
 ```bash
@@ -12,13 +17,13 @@ Workbench integrates with GitHub Copilot through **two complementary mechanisms*
 curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash
 
 # Install skills to Copilot
-wb copilot skills
+workbench copilot skills
 
 # Install hooks for automation
-wb install copilot
+workbench install copilot
 
 # Add custom instructions
-wb print steering-doc >> .github/copilot-instructions.md
+workbench print steering-doc >> .github/copilot-instructions.md
 ```
 
 ## Part 1: Skills Installation
@@ -31,13 +36,13 @@ Skills make workbench commands (`/skillify`, `/dream`, etc.) available to Copilo
 workbench copilot skills
 ```
 
-This creates symlinks in `.agents/skills/` pointing to `~/.workbench/skills/`:
+This creates symlinks in `.agents/skills/` pointing to `<workbenchRoot>/skills/`:
 ```
 .agents/skills/
-├── skillify -> ~/.workbench/skills/skillify
-├── session-extract -> ~/.workbench/skills/session-extract
-├── dream -> ~/.workbench/skills/dream
-└── workbench -> ~/.workbench/skills/workbench
+├── skillify -> <workbenchRoot>/skills/skillify
+├── session-extract -> <workbenchRoot>/skills/session-extract
+├── dream -> <workbenchRoot>/skills/dream
+└── workbench -> <workbenchRoot>/skills/workbench
 ```
 
 **Commit these to your repo** so team members get the same skills.
@@ -58,7 +63,7 @@ ls -la .agents/skills/
 # or
 ls -la ~/.copilot/skills/
 
-# Each should show symlinks to ~/.workbench/skills/*
+# Each should show symlinks to <workbenchRoot>/skills/*
 ```
 
 ### Using Skills
@@ -101,7 +106,7 @@ workbench install copilot
 ### What Hooks Do
 
 **Session Start:**
-- Load memory from `~/.workbench/.tmp/active-memory.md`
+- Load memory from `<workbenchRoot>/.tmp/active-memory.md`
 - Check if dream consolidation is needed
 - Reset tool counter
 
@@ -119,7 +124,7 @@ workbench install copilot
 Hooks output visible messages:
 ```
 🔧 [Workbench] Session starting...
-🔧 [Workbench] Loading memory from ~/.workbench
+🔧 [Workbench] Loading memory from <workbenchRoot>
 ✅ [Workbench] Session started successfully
 ```
 
@@ -201,7 +206,7 @@ This installs to the same locations:
 **Check installation:**
 ```bash
 ls -la .agents/skills/
-# Should show symlinks to ~/.workbench/skills/*
+# Should show symlinks to <workbenchRoot>/skills/*
 ```
 
 **Verify SKILL.md files:**
@@ -244,12 +249,12 @@ echo '{"cwd":"'$(pwd)'","timestamp":'$(date +%s)'}' | \
 
 **Check active memory file:**
 ```bash
-cat ~/.workbench/.tmp/active-memory.md
+cat <workbenchRoot>/.tmp/active-memory.md
 ```
 
 **Check session started:**
 ```bash
-cat ~/.workbench/.tmp/current-session
+cat <workbenchRoot>/.tmp/current-session
 ```
 
 **Check steering doc is present:**
@@ -260,7 +265,7 @@ cat .github/copilot-instructions.md | grep -A5 "Workbench"
 ## Architecture
 
 ```
-~/.workbench/                    # Workbench installation
+<workbenchRoot>/                    # Workbench installation
 ├── skills/                      # Source skills
 │   ├── skillify/
 │   ├── session-extract/
@@ -273,10 +278,10 @@ cat .github/copilot-instructions.md | grep -A5 "Workbench"
     └── dream-pending            # Flag for consolidation
 
 .agents/skills/                  # Copilot project skills
-├── skillify -> ~/.workbench/skills/skillify
-├── session-extract -> ~/.workbench/skills/session-extract
-├── dream -> ~/.workbench/skills/dream
-└── workbench -> ~/.workbench/skills/workbench
+├── skillify -> <workbenchRoot>/skills/skillify
+├── session-extract -> <workbenchRoot>/skills/session-extract
+├── dream -> <workbenchRoot>/skills/dream
+└── workbench -> <workbenchRoot>/skills/workbench
 
 .github/
 ├── hooks/copilot/               # Installed hooks

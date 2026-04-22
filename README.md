@@ -4,7 +4,7 @@ Portable, tool-agnostic agent enhancement primitives — skills, hooks, memory f
 
 Derived from Claude Code's `skillify`, `sessionMemory`, and `autoDream` systems, distilled into universal building blocks with no compilation step, no runtime dependency, and no tool-specific lock-in.
 
-✅ **Workspace indexing is ready to use now** via `workbench index`, `workbench search`, and `workbench status` (with optional MCP integration for Claude Code via `workbench indexer enable`).
+✅ **Workspace indexing is ready to use now** via `workbench index`, `workbench search`, and `workbench status` (with optional MCP integration for Claude Code and Kiro via `workbench indexer enable`).
 
 ## What's Inside
 
@@ -47,10 +47,15 @@ curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.
 
 # Local installation
 curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash -s -- .workbench
+
+# Fully non-interactive (good for scripts/agents)
+curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh \
+  | bash -s -- --non-interactive --target .workbench --agent copilot --scope project --mempalace later
 ```
 
 The installer will:
 - Install workbench files to chosen location
+- Prepare indexer runtime (`pnpm install` + `pnpm run build`) when Node + pnpm/corepack are available
 - Add to PATH automatically (global only)
 - Prompt you to enable MemPalace integration (optional)
 
@@ -58,10 +63,10 @@ The installer will:
 
 ```bash
 # For global installation
-wb doctor
+workbench doctor
 
 # For local installation
-.workbench/bin/wb doctor
+.workbench/bin/workbench doctor
 ```
 
 ### Setup
@@ -73,7 +78,7 @@ The installer handles everything — after installing files it will ask which AI
 If you need to set up a different tool later:
 
 ```bash
-wb install copilot        # installs hooks + steering doc for Copilot
+workbench install copilot        # installs hooks + steering doc for Copilot
 ```
 
 Or manually add the steering doc for tools without hooks (Cursor, Windsurf, Kiro):
@@ -92,12 +97,14 @@ workbench search "auth token flow"   # Search code chunks by meaning + terms
 workbench status                     # Check index health for current project
 ```
 
-For Claude Code MCP auto-integration:
+For MCP auto-integration (Claude Code and Kiro):
 
 ```bash
 workbench indexer enable             # Register workbench-indexer MCP server
 workbench indexer status             # Verify registration + project index state
 ```
+
+`indexer enable` writes an absolute MCP command path to the active install root, so local `.workbench` installs work without adding `workbench-mcp` to PATH.
 
 ## Core Capabilities
 
@@ -183,7 +190,7 @@ Switch modes with `/workbench mode <global|local|hybrid>`.
 - **Custom instructions**: ✓ (via `.cursorrules` or `.windsurfrules`)
 - **Setup**: Add steering doc to rules file
 
-### Kilo / Claude Code
+### Kiro / Claude Code
 
 - **Hooks**: ✗ (manual workflow)
 - **Custom instructions**: ✓ (via `AGENTS.md`)
@@ -225,14 +232,10 @@ workbench index [path]              # Index codebase
 workbench search <query> [--top N]  # Search indexed code (semantic + keyword)
 workbench status                    # Show index status for current directory
 workbench clear                     # Remove current project's index
-workbench indexer enable [path]     # Register indexer MCP with Claude Code
+workbench indexer enable [path]     # Register indexer MCP with supported clients
 workbench indexer disable           # Disable indexer MCP
 workbench indexer status            # Show MCP registration + index state
 workbench mempalace status          # Check MemPalace status
-
-# Short alias: wb
-wb doctor                           # Same as workbench doctor
-wb copilot skills                   # Same as workbench copilot skills
 ```
 
 ## Requirements

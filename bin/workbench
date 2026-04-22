@@ -1,13 +1,170 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WORKBENCH_ROOT="${WORKBENCH_ROOT:-$HOME/.workbench}"
-
-# Resolve path to the compiled wb CLI (packages/cli/dist/index.js).
+# Resolve path to the compiled workbench CLI (packages/cli/dist/index.js).
 # Works both in-repo (bin/ next to packages/) and post-install
 # (~/.workbench/bin/ next to ~/.workbench/packages/).
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WB_CLI="${WB_CLI:-$_SCRIPT_DIR/../packages/cli/dist/index.js}"
+INDEXER_REPO_ROOT="${INDEXER_REPO_ROOT:-$(cd "$_SCRIPT_DIR/.." && pwd)}"
+
+find_nearest_local_workbench_root() {
+  local dir
+  dir="$(pwd)"
+  while true; do
+    if [ -f "$dir/.workbench/config.yaml" ]; then
+      printf '%s\n' "$dir/.workbench"
+      return 0
+    fi
+    local parent
+    parent="$(dirname "$dir")"
+    if [ "$parent" = "$dir" ]; then
+      break
+    fi
+    dir="$parent"
+  done
+  return 1
+}
+
+resolve_workbench_root() {
+  if [ -n "${WORKBENCH_ROOT:-}" ]; then
+    printf '%s\n' "$WORKBENCH_ROOT"
+    return 0
+  fi
+
+  local local_root
+  if local_root="$(find_nearest_local_workbench_root)"; then
+    printf '%s\n' "$local_root"
+    return 0
+  fi
+
+  if [ -f "$_SCRIPT_DIR/../config.yaml" ]; then
+    (cd "$_SCRIPT_DIR/.." && pwd)
+    return 0
+  fi
+
+  printf '%s\n' "$HOME/.workbench"
+}
+
+WORKBENCH_ROOT="$(resolve_workbench_root)"
+
+is_indexer_repo_root() {
+  local repo_root="$1"
+  [ -f "$repo_root/package.json" ] &&
+    [ -f "$repo_root/pnpm-workspace.yaml" ] &&
+    [ -f "$repo_root/packages/core/package.json" ] &&
+    [ -f "$repo_root/packages/mcp/package.json" ] &&
+    [ -f "$repo_root/packages/cli/package.json" ] &&
+    [ -f "$repo_root/packages/mcp/src/index.ts" ]
+}
+
+run_pnpm_in_repo() {
+  local repo_root="$1"
+  shift
+  if command -v pnpm >/dev/null 2>&1; then
+    (cd "$repo_root" && pnpm "$@")
+    return $?
+  fi
+  if command -v corepack >/dev/null 2>&1; then
+    (cd "$repo_root" && corepack pnpm "$@")
+    return $?
+  fi
+  return 127
+}
+
+bootstrap_indexer_runtime() {
+  local repo_root="$1"
+
+  if ! is_indexer_repo_root "$repo_root"; then
+    echo "Error: Incomplete workbench installation at $repo_root" >&2
+    echo "  This install is missing package/workspace metadata required by the MCP indexer." >&2
+    echo "  Reinstall with the latest installer:" >&2
+    echo "    curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash" >&2
+    return 1
+  fi
+
+  if [ -f "$repo_root/packages/cli/dist/index.js" ] && \
+     [ -f "$repo_root/packages/mcp/dist/index.js" ] && \
+     [ -d "$repo_root/node_modules" ]; then
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "Error: Node.js is required to prepare the indexer runtime" >&2
+    echo "  Install Node.js >= 20 from https://nodejs.org" >&2
+    return 1
+  fi
+
+  if ! command -v pnpm >/dev/null 2>&1 && ! command -v corepack >/dev/null 2>&1; then
+    echo "Error: pnpm (or corepack) is required to prepare the indexer runtime" >&2
+    echo "  Install pnpm or enable corepack, then run from $repo_root:" >&2
+    echo "    corepack pnpm install && corepack pnpm run build" >&2
+    return 1
+  fi
+
+  echo "Preparing indexer runtime in $repo_root ..."
+  if ! run_pnpm_in_repo "$repo_root" install --frozen-lockfile >/dev/null 2>&1; then
+    if ! run_pnpm_in_repo "$repo_root" install >/dev/null 2>&1; then
+      echo "Error: Failed to install indexer dependencies" >&2
+      echo "  Run manually in $repo_root:" >&2
+      echo "    corepack pnpm install" >&2
+      return 1
+    fi
+  fi
+  if ! run_pnpm_in_repo "$repo_root" run build >/dev/null 2>&1; then
+    echo "Error: Failed to build indexer packages" >&2
+    echo "  Run manually in $repo_root:" >&2
+    echo "    corepack pnpm run build" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+normalize_mcp_client() {
+  case "${1:-all}" in
+    all|ALL)
+      printf 'all\n'
+      return 0
+      ;;
+    claude|CLAUDE|claude-code|CLAUDE-CODE)
+      printf 'claude\n'
+      return 0
+      ;;
+    kiro|KIRO)
+      printf 'kiro\n'
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+mcp_config_files() {
+  local client="$1"
+  case "$client" in
+    all)
+      printf '%s\n' "$HOME/.claude/.mcp.json"
+      printf '%s\n' "$HOME/.kiro/settings/mcp.json"
+      ;;
+    claude)
+      printf '%s\n' "$HOME/.claude/.mcp.json"
+      ;;
+    kiro)
+      printf '%s\n' "$HOME/.kiro/settings/mcp.json"
+      ;;
+  esac
+}
+
+mcp_client_label() {
+  local path="$1"
+  case "$path" in
+    "$HOME/.claude/.mcp.json") printf 'Claude Code\n' ;;
+    "$HOME/.kiro/settings/mcp.json") printf 'Kiro\n' ;;
+    *) printf '%s\n' "$path" ;;
+  esac
+}
 
 _run_indexer() {
   if ! command -v node >/dev/null 2>&1; then
@@ -15,10 +172,13 @@ _run_indexer() {
     echo "  Install Node.js >= 20 from https://nodejs.org" >&2
     exit 1
   fi
+  if ! bootstrap_indexer_runtime "$INDEXER_REPO_ROOT"; then
+    exit 1
+  fi
   if [ ! -f "$WB_CLI" ]; then
-    echo "Error: Workbench indexer not built." >&2
+    echo "Error: Workbench indexer CLI not found at $WB_CLI" >&2
     echo "  Run from the workbench repo root:" >&2
-    echo "    pnpm install && pnpm run build" >&2
+    echo "    corepack pnpm run build" >&2
     exit 1
   fi
   exec node "$WB_CLI" "$@"
@@ -57,6 +217,23 @@ cmd_doctor() {
       echo "⚠ Missing: $file"
     fi
   done
+
+  echo ""
+  echo "Indexer Runtime:"
+  if is_indexer_repo_root "$WORKBENCH_ROOT"; then
+    echo "✓ Source layout: complete"
+  else
+    echo "⚠ Source layout: incomplete (re-run installer for MCP indexer support)"
+    status=1
+  fi
+
+  if [ -f "$WORKBENCH_ROOT/packages/mcp/dist/index.js" ] && \
+     [ -f "$WORKBENCH_ROOT/packages/cli/dist/index.js" ] && \
+     [ -d "$WORKBENCH_ROOT/node_modules" ]; then
+    echo "✓ Runtime: dependencies and build ready"
+  else
+    echo "○ Runtime: dependencies/build not prepared yet"
+  fi
   
   # Check skills
   for skill in skillify session-extract dream; do
@@ -162,16 +339,55 @@ cmd_mempalace_status() {
 }
 
 cmd_indexer_enable() {
-  local repo_root="${1:-}"
+  local repo_root=""
+  local client="all"
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --client|-c)
+        if [ $# -lt 2 ]; then
+          echo "Error: --client requires a value (claude|kiro|all)" >&2
+          exit 1
+        fi
+        client="$2"
+        shift 2
+        ;;
+      --client=*)
+        client="${1#*=}"
+        shift
+        ;;
+      *)
+        if [ -z "$repo_root" ]; then
+          repo_root="$1"
+          shift
+        else
+          echo "Error: unexpected argument '$1'" >&2
+          echo "Usage: workbench indexer enable [path] [--client claude|kiro|all]" >&2
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  if ! client="$(normalize_mcp_client "$client")"; then
+    echo "Error: invalid --client value. Use claude, kiro, or all." >&2
+    exit 1
+  fi
 
   # 1. Find repo root
   if [ -z "$repo_root" ]; then
-    if [ -f "$(pwd)/packages/mcp/src/index.ts" ]; then
+    if is_indexer_repo_root "$(pwd)"; then
       repo_root="$(pwd)"
-    elif [ -f "$WORKBENCH_ROOT/packages/mcp/src/index.ts" ]; then
+    elif is_indexer_repo_root "$INDEXER_REPO_ROOT"; then
+      repo_root="$INDEXER_REPO_ROOT"
+    elif is_indexer_repo_root "$WORKBENCH_ROOT"; then
       repo_root="$WORKBENCH_ROOT"
     elif [ -f "$WORKBENCH_ROOT/indexer.json" ]; then
-      repo_root="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('repoRoot',''))" "$WORKBENCH_ROOT/indexer.json" 2>/dev/null)"
+      local saved_repo_root
+      saved_repo_root="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('repoRoot',''))" "$WORKBENCH_ROOT/indexer.json" 2>/dev/null)"
+      if is_indexer_repo_root "$saved_repo_root"; then
+        repo_root="$saved_repo_root"
+      fi
     fi
   fi
 
@@ -183,7 +399,7 @@ cmd_indexer_enable() {
         "$HOME/code/workbench" \
         "$HOME/Desktop/workbench" \
         "$HOME/Desktop/Pasha/workbench"; do
-      if [ -f "$candidate/packages/mcp/src/index.ts" ]; then
+      if is_indexer_repo_root "$candidate"; then
         repo_root="$candidate"
         break
       fi
@@ -191,36 +407,39 @@ cmd_indexer_enable() {
   fi
 
   if [ -z "$repo_root" ]; then
-    echo "Error: Could not find the workbench repo. Pass the path as an argument:" >&2
+    echo "Error: Could not find a complete workbench repo. Pass the path as an argument:" >&2
     echo "  workbench indexer enable /path/to/workbench" >&2
     exit 1
   fi
 
-  # 2. Verify required files
-  if [ ! -f "$repo_root/packages/mcp/src/index.ts" ]; then
-    echo "Error: $repo_root/packages/mcp/src/index.ts not found" >&2
-    exit 1
-  fi
-  if [ ! -f "$repo_root/packages/core/loader.mjs" ]; then
-    echo "Error: $repo_root/packages/core/loader.mjs not found" >&2
+  if ! bootstrap_indexer_runtime "$repo_root"; then
     exit 1
   fi
 
-  # 3. Generate ~/.workbench/bin/wb-mcp wrapper
-  local wb_mcp="$WORKBENCH_ROOT/bin/wb-mcp"
-  printf '#!/usr/bin/env bash\n# Generated by: workbench indexer enable\n# Workbench indexer MCP server launcher\nexec node \\\n  --experimental-strip-types \\\n  --experimental-loader "%s/packages/core/loader.mjs" \\\n  "%s/packages/mcp/src/index.ts"\n' \
-    "$repo_root" "$repo_root" > "$wb_mcp"
-  chmod +x "$wb_mcp"
+  if [ ! -f "$repo_root/packages/mcp/dist/index.js" ]; then
+    echo "Error: $repo_root/packages/mcp/dist/index.js not found after build" >&2
+    exit 1
+  fi
+
+  # 3. Generate <workbenchRoot>/bin/workbench-mcp wrapper
+  local workbench_mcp="$WORKBENCH_ROOT/bin/workbench-mcp"
+  printf '#!/usr/bin/env bash\n# Generated by: workbench indexer enable\n# Workbench indexer MCP server launcher\nexec node "%s/packages/mcp/dist/index.js"\n' \
+    "$repo_root" > "$workbench_mcp"
+  chmod +x "$workbench_mcp"
+  rm -f "$WORKBENCH_ROOT/bin/wb-mcp" 2>/dev/null || true
 
   # 4. Save repo root for future re-runs
   echo "{\"repoRoot\":\"$repo_root\"}" > "$WORKBENCH_ROOT/indexer.json"
 
-  # 5. Edit ~/.claude/.mcp.json (create if missing)
-  local mcp_json="$HOME/.claude/.mcp.json"
-  python3 - "$mcp_json" << 'PYEOF'
+  # 5. Edit MCP config files (create if missing)
+  local mcp_json
+  mapfile -t mcp_files < <(mcp_config_files "$client")
+  for mcp_json in "${mcp_files[@]}"; do
+    python3 - "$mcp_json" "$workbench_mcp" << 'PYEOF'
 import json, sys, os
 
 path = sys.argv[1]
+command = sys.argv[2]
 os.makedirs(os.path.dirname(path), exist_ok=True)
 data = {}
 if os.path.exists(path):
@@ -229,7 +448,7 @@ if os.path.exists(path):
 if "mcpServers" not in data:
     data["mcpServers"] = {}
 data["mcpServers"]["workbench-indexer"] = {
-    "command": "wb-mcp",
+    "command": command,
     "disabled": False,
     "autoApprove": ["search_code", "get_indexing_status"]
 }
@@ -237,30 +456,65 @@ with open(path, "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
 PYEOF
+  done
 
-  echo "✓ wb-mcp wrapper written to $wb_mcp"
-  echo "✓ workbench-indexer added to $HOME/.claude/.mcp.json"
+  echo "✓ workbench-mcp wrapper written to $workbench_mcp"
+  for mcp_json in "${mcp_files[@]}"; do
+    echo "✓ workbench-indexer configured in $(mcp_client_label "$mcp_json") ($mcp_json)"
+  done
   echo ""
   echo "Next steps:"
-  echo "  1. Run \`wb index\` in your project (downloads model + grammars on first run, ~400 MB)"
-  echo "  2. Restart Claude Code to load the new MCP server"
-  echo "  3. In your project, ask Claude: \"index this codebase\" to build the index"
+  echo "  1. Run \`workbench index\` in your project (downloads model + grammars on first run, ~400 MB)"
+  echo "  2. Restart your MCP client(s) to load the updated server config"
+  echo "  3. In your project, ask your agent to \"index this codebase\""
 }
 
 cmd_indexer_disable() {
-  local mcp_json="$HOME/.claude/.mcp.json"
-  if [ ! -f "$mcp_json" ]; then
-    echo "Indexer is not configured — run 'workbench indexer enable' first."
+  local client="all"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --client|-c)
+        if [ $# -lt 2 ]; then
+          echo "Error: --client requires a value (claude|kiro|all)" >&2
+          exit 1
+        fi
+        client="$2"
+        shift 2
+        ;;
+      --client=*)
+        client="${1#*=}"
+        shift
+        ;;
+      *)
+        echo "Error: unexpected argument '$1'" >&2
+        echo "Usage: workbench indexer disable [--client claude|kiro|all]" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if ! client="$(normalize_mcp_client "$client")"; then
+    echo "Error: invalid --client value. Use claude, kiro, or all." >&2
     exit 1
   fi
 
-  local result
-  result="$(python3 - "$mcp_json" << 'PYEOF'
+  local mcp_json result
+  local configured_count=0
+  mapfile -t mcp_files < <(mcp_config_files "$client")
+  for mcp_json in "${mcp_files[@]}"; do
+    result="$(python3 - "$mcp_json" << 'PYEOF'
 import json, sys
 
 path = sys.argv[1]
-with open(path) as f:
-    data = json.load(f)
+try:
+    with open(path) as f:
+        data = json.load(f)
+except FileNotFoundError:
+    print("NOT_CONFIGURED")
+    sys.exit(0)
+except Exception:
+    print("NOT_CONFIGURED")
+    sys.exit(0)
 if "workbench-indexer" not in data.get("mcpServers", {}):
     print("NOT_CONFIGURED")
     sys.exit(0)
@@ -272,26 +526,58 @@ print("OK")
 PYEOF
 )"
 
-  if [ "$result" = "NOT_CONFIGURED" ]; then
+    if [ "$result" = "OK" ]; then
+      configured_count=$((configured_count + 1))
+      echo "✓ workbench-indexer disabled in $(mcp_client_label "$mcp_json") ($mcp_json)"
+    fi
+  done
+
+  if [ "$configured_count" -eq 0 ]; then
     echo "Indexer is not configured — run 'workbench indexer enable' first."
     exit 1
   fi
 
-  echo "✓ workbench-indexer disabled in $HOME/.claude/.mcp.json"
-  echo "Restart Claude Code to apply."
+  echo "Restart your MCP client(s) to apply."
   echo "Run 'workbench indexer enable' to re-enable."
 }
 
 cmd_indexer_status() {
+  local client="all"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --client|-c)
+        if [ $# -lt 2 ]; then
+          echo "Error: --client requires a value (claude|kiro|all)" >&2
+          exit 1
+        fi
+        client="$2"
+        shift 2
+        ;;
+      --client=*)
+        client="${1#*=}"
+        shift
+        ;;
+      *)
+        echo "Error: unexpected argument '$1'" >&2
+        echo "Usage: workbench indexer status [--client claude|kiro|all]" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if ! client="$(normalize_mcp_client "$client")"; then
+    echo "Error: invalid --client value. Use claude, kiro, or all." >&2
+    exit 1
+  fi
+
   echo "Workbench Indexer Status"
   echo "═════════════════════════"
 
-  # 1. MCP registration
-  local mcp_json="$HOME/.claude/.mcp.json"
-  if [ ! -f "$mcp_json" ]; then
-    echo "MCP server:     ✗ Not registered"
-  else
-    local mcp_status
+  # 1. MCP registration across selected clients
+  echo "MCP clients:"
+  local mcp_json mcp_status
+  mapfile -t mcp_files < <(mcp_config_files "$client")
+  for mcp_json in "${mcp_files[@]}"; do
     mcp_status="$(python3 - "$mcp_json" << 'PYEOF'
 import json, sys
 try:
@@ -308,19 +594,21 @@ except Exception:
     print("NOT_REGISTERED")
 PYEOF
 )"
+    local label
+    label="$(mcp_client_label "$mcp_json")"
     case "$mcp_status" in
-      ACTIVE)          echo "MCP server:     ✓ Registered and active" ;;
-      DISABLED)        echo "MCP server:     ⚠ Registered but disabled" ;;
-      NOT_REGISTERED)  echo "MCP server:     ✗ Not registered" ;;
+      ACTIVE)          echo "  $label: ✓ Registered and active" ;;
+      DISABLED)        echo "  $label: ⚠ Registered but disabled" ;;
+      NOT_REGISTERED)  echo "  $label: ○ Not configured" ;;
     esac
-  fi
+  done
 
   # 2. Model + grammars
   local grammar="$WORKBENCH_ROOT/grammars/tree-sitter-python.wasm"
   if [ -f "$grammar" ] && find "$WORKBENCH_ROOT/models" -name "*.onnx" -maxdepth 6 2>/dev/null | grep -q .; then
     echo "Model/grammars: ✓ Ready"
   else
-    echo "Model/grammars: ✗ Not ready — run: wb index (triggers auto-setup)"
+    echo "Model/grammars: ✗ Not ready — run: workbench index (triggers auto-setup)"
   fi
 
   # 3. Project index
@@ -440,7 +728,7 @@ case "${1:-}" in
   init)
     cmd_init
     ;;
-  index|search|clear)
+  index|status|search|clear)
     _run_indexer "$@"
     ;;
   indexer)
@@ -448,19 +736,21 @@ case "${1:-}" in
     case "${1:-}" in
       enable)
         shift
-        cmd_indexer_enable "${1:-}"
+        cmd_indexer_enable "$@"
         ;;
       disable)
-        cmd_indexer_disable
+        shift
+        cmd_indexer_disable "$@"
         ;;
       status)
-        cmd_indexer_status
+        shift
+        cmd_indexer_status "$@"
         ;;
       *)
         echo "Usage: workbench indexer <enable|disable|status>" >&2
-        echo "  enable [path]  Register MCP server with Claude Code" >&2
-        echo "  disable        Disable MCP server (preserves config)" >&2
-        echo "  status         Show MCP registration + index state" >&2
+        echo "  enable [path] [--client claude|kiro|all]   Register MCP server config" >&2
+        echo "  disable [--client claude|kiro|all]         Disable MCP server (preserves config)" >&2
+        echo "  status [--client claude|kiro|all]          Show MCP registration + index state" >&2
         exit 1
         ;;
     esac
@@ -477,7 +767,7 @@ case "${1:-}" in
     echo "  workbench mempalace status          Check MemPalace status"
     echo ""
     echo "Indexer MCP setup:"
-    echo "  workbench indexer enable [path]     Register indexer MCP with Claude Code"
+    echo "  workbench indexer enable [path]     Register indexer MCP with supported clients"
     echo "  workbench indexer disable           Disable indexer MCP"
     echo "  workbench indexer status            Show MCP registration + index state"
     echo ""

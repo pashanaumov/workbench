@@ -2,6 +2,11 @@
 
 This folder contains a reference implementation of the workbench hook pattern for GitHub Copilot. The pattern is universal — you can adapt it for any tool that supports lifecycle hooks.
 
+In this guide, `<workbenchRoot>` means:
+1. `WORKBENCH_ROOT` (if set)
+2. `.workbench` in the current project (or nearest parent)
+3. `~/.workbench` fallback
+
 ## What These Hooks Do
 
 **`session-start.sh`** — Fires when a session begins
@@ -25,7 +30,7 @@ This folder contains a reference implementation of the workbench hook pattern fo
 1. Copy this folder to your repo:
 ```bash
 mkdir -p .github/hooks
-cp -r ~/.workbench/hooks/copilot .github/hooks/
+cp -r <workbenchRoot>/hooks/copilot .github/hooks/
 chmod +x .github/hooks/copilot/*.sh
 ```
 
@@ -80,7 +85,7 @@ Replace `hooks.json` with your tool's hook registration format. The logic in the
 
 ## Configuration
 
-All thresholds are in `~/.workbench/config.yaml`:
+All thresholds are in `<workbenchRoot>/config.yaml`:
 
 ```yaml
 session_extract:
@@ -136,8 +141,8 @@ echo '{"reason": "complete"}' | ./session-end.sh
 
 Check state files:
 ```bash
-cat ~/.workbench/.tmp/current-session
-cat ~/.workbench/.tmp/tool-count-*
-cat ~/.workbench/.tmp/session-count
-ls -la ~/.workbench/.tmp/extract-pending
+cat <workbenchRoot>/.tmp/current-session
+cat <workbenchRoot>/.tmp/tool-count-*
+cat <workbenchRoot>/.tmp/session-count
+ls -la <workbenchRoot>/.tmp/extract-pending
 ```

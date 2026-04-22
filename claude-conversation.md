@@ -204,20 +204,20 @@ So the packages would be:
 @workbench/cli
 
 What should the top-level CLI command be called? When someone runs npx @workbench/cli, that's fine for one-off use — but if they install it globally or use it daily, they'll want a short command name.
-My recommendation: wb — short, memorable, not taken as a common system command, and feels like a natural abbreviation of workbench. wb index, wb status, wb search reads well.
-Does wb work for you?You said: nice.nice. agreed21 AprClaude responded: Good.Good.
+My recommendation: workbench — short, memorable, not taken as a common system command, and feels like a natural abbreviation of workbench. workbench index, workbench status, workbench search reads well.
+Does workbench work for you?You said: nice.nice. agreed21 AprClaude responded: Good.Good.
 What commands should the CLI expose for v1?
 My recommendation: four commands:
 
-wb index — index a codebase (defaults to current directory)
-wb status — show indexing status and stats for current project
-wb search <query> — test a search query directly in the terminal (useful for debugging/validating the index)
-wb clear — wipe the index for the current project
+workbench index — index a codebase (defaults to current directory)
+workbench status — show indexing status and stats for current project
+workbench search <query> — test a search query directly in the terminal (useful for debugging/validating the index)
+workbench clear — wipe the index for the current project
 
 This mirrors the four MCP tools exactly, which is intentional — the CLI and MCP surface should be 1:1 so the core API maps cleanly to both.
 Does that cover it, or are there commands you'd want from day one?You said: yes.yes. let's follow your recommendations21 AprClaude responded: Great.Great.
 Where should the Qdrant data be stored? Coming back to this now that we have a name.
-My recommendation: ~/.workbench/<project-hash>/ — global directory named after the project, keyed by a hash of the absolute project path. Clean, out of the project, no .gitignore issues, and wb status can easily list all indexed projects by scanning ~/.workbench/.
+My recommendation: ~/.workbench/<project-hash>/ — global directory named after the project, keyed by a hash of the absolute project path. Clean, out of the project, no .gitignore issues, and workbench status can easily list all indexed projects by scanning ~/.workbench/.
 Agreed?You said: Again, what are the arguments for using qdrant instead of chroma ?Again, what are the arguments for using qdrant instead of chroma ?21 AprClaude responded: Good question to revisit now that the shape of the project is clearer.Good question to revisit now that the shape of the project is clearer.
 QdrantChromaDBLanguageRustPythonHybrid searchBuilt-in (sparse + dense)Vectors only, no BM25Embedded modeYes (no server needed)YesTypeScript SDKFirst-classExists but thinnerPerformanceFaster, lower memoryFine for small codebasesMaturityProduction-gradeMore of a prototyping tool
 The single biggest argument for Qdrant here is native hybrid search — BM25 + dense vectors in one query, no extra infrastructure. With ChromaDB you'd have to implement BM25 separately and merge results yourself, which is non-trivial and undermines the 80/20 goal.
@@ -227,7 +227,7 @@ Want to stick with Qdrant or switch?You said: sure.sure. qdrant works21 AprClaud
 How should Qdrant run in embedded mode? Qdrant is a Rust binary — in embedded mode it needs to either be bundled with the package or downloaded on first run.
 Options:
 
-Download on first run — wb index checks if Qdrant binary exists in ~/.workbench/bin/, downloads the right platform binary if not. Similar to how Playwright downloads browsers.
+Download on first run — workbench index checks if Qdrant binary exists in ~/.workbench/bin/, downloads the right platform binary if not. Similar to how Playwright downloads browsers.
 Docker — run Qdrant as a container. Requires Docker installed, too much friction.
 qdrant-js embedded — there's a @qdrant/qdrant-js client but it still needs a running Qdrant server, not truly embedded.
 
@@ -272,22 +272,22 @@ Agreed, or do you want to adjust the numbers?You said: Actually, I think we need
 How should the user set this?
 Options:
 
-wb index --strategy sliding-window / --strategy function as a CLI flag per-run
+workbench index --strategy sliding-window / --strategy function as a CLI flag per-run
 A ~/.workbench/config.json global default they set once
 Per-project config in .workbench.json at the project root
 
 My recommendation: per-project config in .workbench.json with a global default fallback in ~/.workbench/config.json. So the resolution order is: CLI flag → .workbench.json → global config → hardcoded default (sliding-window). This means you can set your personal preference globally, override it per project, and override that ad-hoc with a flag. Standard layered config pattern, nothing surprising.
 Agreed?You said: yepyep21 AprClaude responded: Good.Good.
 How should incremental reindexing work? When files change, we don't want to reindex the entire codebase.
-My recommendation: file hash map stored in ~/.workbench/<project-hash>/manifest.json — on each wb index run, compute a SHA256 hash of every file's contents, compare against the stored manifest, and only rechunk + reembed files that have changed or are new. Deleted files get their chunks removed from Qdrant. This is simpler than Merkle trees (which Zilliz uses) and achieves the same result for a single-machine use case — Merkle trees only win when you're syncing across distributed nodes.
-wb index becomes safe to run repeatedly — fast if little has changed, only expensive on first run or after big refactors.
-Agreed?You said: yes.yes. as long as it's automatic21 AprClaude responded: Absolutely — wb index always runs the incremental check automatically, no flags needed.Absolutely — wb index always runs the incremental check automatically, no flags needed. It's just always smart about it.
+My recommendation: file hash map stored in ~/.workbench/<project-hash>/manifest.json — on each workbench index run, compute a SHA256 hash of every file's contents, compare against the stored manifest, and only rechunk + reembed files that have changed or are new. Deleted files get their chunks removed from Qdrant. This is simpler than Merkle trees (which Zilliz uses) and achieves the same result for a single-machine use case — Merkle trees only win when you're syncing across distributed nodes.
+workbench index becomes safe to run repeatedly — fast if little has changed, only expensive on first run or after big refactors.
+Agreed?You said: yes.yes. as long as it's automatic21 AprClaude responded: Absolutely — workbench index always runs the incremental check automatically, no flags needed.Absolutely — workbench index always runs the incremental check automatically, no flags needed. It's just always smart about it.
 How should the MCP server know when to trigger a reindex? The MCP runs as a long-lived process inside Claude Code. The codebase changes while it's running.
 Options:
 
 On every search call — check the manifest before each search, reindex changed files inline. Simple but adds latency to searches.
 File watcher — watch the project directory for changes, reindex in the background automatically.
-Manual only — user runs wb index themselves, MCP just searches whatever is currently indexed.
+Manual only — user runs workbench index themselves, MCP just searches whatever is currently indexed.
 
 My recommendation: file watcher running in the background inside the MCP process — uses chokidar (the standard Node.js file watcher), debounced at 2 seconds so rapid saves don't trigger multiple reindexes. Completely invisible to the user, index stays fresh without any manual intervention. This is the Copilot-like behaviour you wanted from the start.
 Agreed?You said: suresure21 AprClaude responded: Good.Good.
@@ -300,12 +300,12 @@ Both — auto-detect as default, env var as override.
 
 My recommendation: both — auto-detect by finding the nearest .git root from cwd, with WORKBENCH_PROJECT_PATH as an explicit override. This means for most users it just works when they open Claude Code in their project directory, but monorepos or non-git projects can still point it at the right place explicitly.
 Agreed?You said: yepyep21 AprClaude responded: Good.Good.
-How should the first-run experience work? When a user runs wb index for the first time on a project, there are potentially three things to download before indexing even starts — the Qdrant binary, the Transformers.js model weights, and the Tree-sitter grammars.
-My recommendation: a single, clear setup step with a progress UI — on first run, wb index detects what's missing and downloads everything in sequence with a nice terminal progress display (using ora for spinners + cli-progress for download bars). Something like:
+How should the first-run experience work? When a user runs workbench index for the first time on a project, there are potentially three things to download before indexing even starts — the Qdrant binary, the Transformers.js model weights, and the Tree-sitter grammars.
+My recommendation: a single, clear setup step with a progress UI — on first run, workbench index detects what's missing and downloads everything in sequence with a nice terminal progress display (using ora for spinners + cli-progress for download bars). Something like:
 ⬇  Downloading Qdrant binary (45MB)... ████████░░ 78%
 ⬇  Downloading embedding model (33MB)... done
 ✓  Setup complete. Indexing your codebase...
-After that first run everything is cached in ~/.workbench/ and subsequent runs skip straight to indexing. No silent downloads mid-search, no surprises — all downloading happens at wb index time, never during a search query.
+After that first run everything is cached in ~/.workbench/ and subsequent runs skip straight to indexing. No silent downloads mid-search, no surprises — all downloading happens at workbench index time, never during a search query.
 Agreed?You said: sounds goodsounds good21 AprClaude responded: Good.Good.
 How should search results be returned to Claude Code via the MCP?
 When Claude Code calls the search_code tool, what does the response look like?
@@ -334,7 +334,7 @@ Structure
 
 Monorepo with pnpm workspaces + esbuild (ESM only)
 Three packages: @workbench/core, @workbench/mcp, @workbench/cli
-CLI command: wb with index, status, search, clear
+CLI command: workbench with index, status, search, clear
 
 Storage
 
@@ -348,7 +348,7 @@ Tree-sitter AST chunking, 8 languages (TS/JS, Python, Rust, Go, Java, C/C++, Rub
 Chunking strategy: sliding window or function/method level, user-selectable
 Config resolution: CLI flag → .workbench.json → ~/.workbench/config.json → default (sliding window)
 Window size: 50 lines, 20% overlap (configurable)
-Incremental reindexing via SHA256 file hash manifest, automatic on every wb index run
+Incremental reindexing via SHA256 file hash manifest, automatic on every workbench index run
 
 Embeddings
 
@@ -363,7 +363,7 @@ Search returns up to 5 results by default: file, startLine, endLine, content, sc
 
 First run
 
-Single wb index command downloads Qdrant binary + model weights + grammars with visible progress UI
+Single workbench index command downloads Qdrant binary + model weights + grammars with visible progress UI
 
 License: MIT
 
@@ -452,7 +452,7 @@ ConfigResolver — resolves layered config (CLI flag → .workbench.json → ~/.
 Setup — handles first-run downloads of Qdrant binary and model weights. Progress callbacks for the CLI to render.
 
 @workbench/mcp: A thin wrapper — registers the four MCP tools and delegates to Indexer and VectorStore. Also owns the chokidar file watcher.
-@workbench/cli: Thin command handlers for wb index/status/search/clear, renders progress UI, delegates to core.
+@workbench/cli: Thin command handlers for workbench index/status/search/clear, renders progress UI, delegates to core.
 
 Does this module breakdown match your expectations? And which modules do you want tests written for?You said: Tests for all the critical business logicTests for all the critical business logic21 AprClaude responded: Good — so Chunker, Embedder, VectorStore, Manifest, and ConfigResolver.Good — so Chunker, Embedder, VectorStore, Manifest, and ConfigResolver. Skipping Setup (mostly I/O and download logic) and the thin wrappers (mcp, cli).
 Let me write the PRD now.Created a file, ran a command, read a fileCreated a file, ran a command, read a fileThere's your Workbench PRD. It covers everything we agreed on — 30 user stories, all seven core modules with their interfaces documented, testing decisions for the five critical modules, and a clear out-of-scope section to keep v1 focused.
@@ -540,7 +540,7 @@ Here's my proposed breakdown:
 Type: AFK
 Blocked by: Nothing
 User stories: 23
-Set up pnpm workspace, esbuild config, three package stubs (@workbench/core, @workbench/mcp, @workbench/cli), TypeScript config, ESM output, basic wb binary entry point that prints version.
+Set up pnpm workspace, esbuild config, three package stubs (@workbench/core, @workbench/mcp, @workbench/cli), TypeScript config, ESM output, basic workbench binary entry point that prints version.
 
 1. ConfigResolver — layered config
 
@@ -591,12 +591,12 @@ Blocked by: 3, 4, 6, 7
 User stories: 1, 2, 6, 12, 19, 20
 Wire Manifest + Chunker + Embedder + VectorStore into Indexer. Incremental reindexing automatic on every run. .gitignore respected. Progress callbacks.
 
-1. CLI — wb commands
+1. CLI — workbench commands
 
 Type: AFK
 Blocked by: 8
 User stories: 1, 7, 8, 9, 10, 22
-Implement wb index, wb status, wb search, wb clear. First-run setup progress UI (ora + cli-progress). Delegates entirely to @workbench/core.
+Implement workbench index, workbench status, workbench search, workbench clear. First-run setup progress UI (ora + cli-progress). Delegates entirely to @workbench/core.
 
 1. MCP server — four tools
 

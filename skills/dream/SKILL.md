@@ -7,10 +7,15 @@ description: Consolidate recent session notes into durable, well-organized memor
 
 You are performing a dream — a reflective pass over your memory files. Synthesize what you've learned recently into durable, well-organized memories so that future sessions can orient quickly.
 
-Memory directory: `~/.workbench/memory/`
-Session notes: `~/.workbench/session-memory/` (structured markdown files)
+Path convention: resolve `<workbenchRoot>` first.
+- If `WORKBENCH_ROOT` is set, use it.
+- Otherwise, if `.workbench/config.yaml` exists in the current project (or parent), use that `.workbench` path.
+- Otherwise, use `~/.workbench`.
 
-If the memory directory doesn't exist yet, create it with `mkdir -p ~/.workbench/memory/` and start fresh.
+Memory directory: `<workbenchRoot>/memory/`
+Session notes: `<workbenchRoot>/session-memory/` (structured markdown files)
+
+If the memory directory doesn't exist yet, create it with `mkdir -p <workbenchRoot>/memory/` and start fresh.
 
 ---
 
@@ -30,12 +35,12 @@ If the memory directory doesn't exist yet, create it with `mkdir -p ~/.workbench
 
 Look for new information worth persisting. Sources:
 
-1. **Session notes** (`~/.workbench/session-memory/*.md`) — read recent files, grep for signal
+1. **Session notes** (`<workbenchRoot>/session-memory/*.md`) — read recent files, grep for signal
 2. **Existing memories that drifted** — facts that contradict something you see now
 
 When searching session notes, use grep for narrow terms:
 ```bash
-grep -rn "<term>" ~/.workbench/session-memory/ --include="*.md" | tail -50
+grep -rn "<term>" <workbenchRoot>/session-memory/ --include="*.md" | tail -50
 ```
 
 Don't exhaustively read all notes. Look only for things you already suspect matter.

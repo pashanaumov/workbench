@@ -8,13 +8,18 @@ argument-hint: "[description of the process you want to capture]"
 
 You are capturing this session's repeatable process as a reusable skill.
 
+Path convention: resolve `<workbenchRoot>` first.
+- If `WORKBENCH_ROOT` is set, use it.
+- Otherwise, if `.workbench/config.yaml` exists in the current project (or parent), use that `.workbench` path.
+- Otherwise, use `~/.workbench`.
+
 ## Your Session Context
 
 **Step 1: Gather context**
 
 Before starting the interview, gather context from:
-- Session memory notes: Read `~/.workbench/session-memory/` to find the most recent session note file for this project
-- Existing memory: Read `~/.workbench/memory/MEMORY.md` if it exists
+- Session memory notes: Read `<workbenchRoot>/session-memory/` to find the most recent session note file for this project
+- Existing memory: Read `<workbenchRoot>/memory/MEMORY.md` if it exists
 - Current conversation history
 
 Analyze to identify:
@@ -43,7 +48,7 @@ Use your tool's native question mechanism (structured prompts, confirmation dial
 - If you think the skill will require arguments, suggest arguments based on what you observed.
 - Ask where the skill should be saved. Suggest a default based on context (repo-specific workflows → repo, cross-repo personal workflows → user). Options:
   - **This repo** (your tool's skill directory, e.g. `.kilo/skills/<name>/SKILL.md`, `.claude/skills/<name>/SKILL.md`) — for workflows specific to this project
-  - **Personal** (`~/.workbench/skills/<name>/SKILL.md`) — follows you across all repos and tools
+  - **Personal** (`<workbenchRoot>/skills/<name>/SKILL.md`) — follows you across all repos and tools
 
 **Round 3: Breaking down each step**
 For each major step, if it's not obvious, ask:
