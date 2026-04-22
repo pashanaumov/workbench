@@ -16,7 +16,7 @@ export interface VectorRecord {
   header: string;
   body: string;
   embedText: string;
-  /** Optional back-link to the original source (e.g. GitHub URL). Used by the CSN benchmark. */
+  /** Back-link to the original source (e.g. GitHub URL). Empty string when none. */
   sourceUrl: string;
   vector: number[];
 }

@@ -193,6 +193,16 @@ export class Indexer {
       }
     }
 
+    // Report chunksTotal now that chunking is complete
+    onProgress?.({
+      phase: 'embed',
+      filesTotal: filesToProcess.length,
+      filesDone: filesToProcess.length,
+      chunksTotal: allChunkEntries.length,
+      chunksDone: 0,
+      errors: [...errors],
+    });
+
     // Embed in batches
     const vectors: number[][] = [];
     for (let i = 0; i < allChunkEntries.length; i += this.config.batchSize) {
@@ -200,6 +210,20 @@ export class Indexer {
       const texts = batch.map((c) => c.chunk.embedText);
       const batchVectors = await this.embedder.embed(texts);
       vectors.push(...batchVectors);
+      onProgress?.({
+        phase: 'embed',
+        filesTotal: filesToProcess.length,
+        filesDone: filesToProcess.length,
+        chunksTotal: allChunkEntries.length,
+        chunksDone: vectors.length,
+        errors: [...errors],
+      });
+    }
+
+    if (vectors.length !== allChunkEntries.length) {
+      throw new Error(
+        `Embedder returned ${vectors.length} vectors for ${allChunkEntries.length} chunks — mismatch`,
+      );
     }
 
     // Build VectorRecords
@@ -213,7 +237,7 @@ export class Indexer {
       body: c.chunk.body,
       embedText: c.chunk.embedText,
       sourceUrl: sourceUrlProvider?.(c.chunk.filePath) ?? '',
-      vector: vectors[i] ?? [],
+      vector: vectors[i] as number[],
     }));
 
     // ----- STORE -----
@@ -247,12 +271,16 @@ export class Indexer {
 
     await saveManifest(manifestFilePath, finalManifest);
 
-    // Write stats.json so `wb status` can report last-indexed time and chunk count.
+    // Write stats.json so `wb status` and MCP `get_indexing_status` can report persistent state.
     const statsPath = join(this.config.indexDir, 'stats.json');
     await mkdir(this.config.indexDir, { recursive: true });
     await writeFile(
       statsPath,
-      JSON.stringify({ lastIndexedAt: Date.now(), chunkCount: await this.vectorStore.count() }),
+      JSON.stringify({
+        lastIndexedAt: Date.now(),
+        chunkCount: await this.vectorStore.count(),
+        fileCount: Object.keys(finalManifest).length,
+      }),
     );
 
     // ----- DONE -----

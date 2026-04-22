@@ -55,7 +55,7 @@ wb --help
 
 ```bash
 wb status               # should say "No index found" (that's fine)
-wb index --help         # shows usage
+wb index --help         # shows usage (or: wb --help)
 ```
 
 ---
@@ -234,12 +234,13 @@ cat ~/.workbench/$(wb status | grep 'Index path' | awk '{print $NF}')/stats.json
 
 ```json
 {
-  "lastIndexedAt": "2026-04-22T17:42:23.290Z",
-  "chunkCount": 1847
+  "lastIndexedAt": 1745341343290,
+  "chunkCount": 1847,
+  "fileCount": 42
 }
 ```
 
-`wb status` reads this file and formats it as "N minutes ago".
+`wb status` reads this file and formats `lastIndexedAt` (ms since epoch) as "N minutes ago".
 
 ### Index directory layout
 

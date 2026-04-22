@@ -188,7 +188,7 @@ Register the workbench-indexer MCP server with Claude Code so it is auto-started
    "workbench-indexer": {
      "command": "wb-mcp",
      "disabled": false,
-     "autoApprove": ["search_codebase", "get_index_status"]
+     "autoApprove": ["search_code", "get_indexing_status"]
    }
    ```
    - Write the file back (preserve all other entries).
@@ -199,7 +199,7 @@ Register the workbench-indexer MCP server with Claude Code so it is auto-started
    ✓ workbench-indexer added to ~/.claude/.mcp.json
 
    Next steps:
-     1. Run `wb setup` if you haven't already (downloads model + grammars, ~400 MB)
+     1. Run `wb index` in your project (downloads model + grammars on first run, ~400 MB)
      2. Restart Claude Code to load the new MCP server
      3. In your project, ask Claude: "index this codebase" to build the index
    ```
@@ -236,7 +236,7 @@ Show the current state of the indexer: MCP registration, model setup, and index 
    - Present, enabled → `✓ Registered and active`
 
 2. **Model setup** — check `~/.workbench/grammars/tree-sitter-python.wasm` exists AND `~/.workbench/models/jinaai` (or any subdirectory) has `.onnx` files:
-   - Missing → `✗ Setup not done — run: wb setup`
+   - Missing → `✗ Setup not done — run: wb index (triggers auto-setup)`
    - Present → `✓ Model and grammars ready`
 
 3. **Project index** — compute the project hash from cwd:

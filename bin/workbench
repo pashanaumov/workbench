@@ -229,7 +229,7 @@ if "mcpServers" not in data:
 data["mcpServers"]["workbench-indexer"] = {
     "command": "wb-mcp",
     "disabled": False,
-    "autoApprove": ["search_codebase", "get_index_status"]
+    "autoApprove": ["search_code", "get_indexing_status"]
 }
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
@@ -240,7 +240,7 @@ PYEOF
   echo "✓ workbench-indexer added to $HOME/.claude/.mcp.json"
   echo ""
   echo "Next steps:"
-  echo "  1. Run \`wb setup\` if you haven't already (downloads model + grammars, ~400 MB)"
+  echo "  1. Run \`wb index\` in your project (downloads model + grammars on first run, ~400 MB)"
   echo "  2. Restart Claude Code to load the new MCP server"
   echo "  3. In your project, ask Claude: \"index this codebase\" to build the index"
 }
@@ -318,7 +318,7 @@ PYEOF
   if [ -f "$grammar" ] && find "$WORKBENCH_ROOT/models" -name "*.onnx" -maxdepth 6 2>/dev/null | grep -q .; then
     echo "Model/grammars: ✓ Ready"
   else
-    echo "Model/grammars: ✗ Not ready — run: wb setup"
+    echo "Model/grammars: ✗ Not ready — run: wb index (triggers auto-setup)"
   fi
 
   # 3. Project index
@@ -335,9 +335,9 @@ try:
     with open(path) as f:
         stats = json.load(f)
     chunks = stats.get("chunkCount", "?")
-    ts = stats.get("lastIndexedAt", "")
+    ts = stats.get("lastIndexedAt", 0)
     if ts:
-        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
         diff = datetime.now(timezone.utc) - dt
         secs = diff.total_seconds()
         if secs < 3600:

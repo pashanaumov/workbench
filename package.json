@@ -11,7 +11,7 @@
     "clean": "tsc --build --clean",
     "bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/benchmark.ts",
     "csn-bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/csn-benchmark.ts",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests"
+    "test": "pnpm --filter @workbench/core test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",

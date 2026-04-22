@@ -18,10 +18,23 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
     options: {
       force: { type: 'boolean', short: 'f', default: false },
       embedder: { type: 'string' },
+      help: { type: 'boolean', short: 'h', default: false },
     },
     allowPositionals: true,
     strict: true,
   });
+
+  if (values.help) {
+    console.log('Usage: wb index [path] [options]');
+    console.log('');
+    console.log('Index a project into the local vector store.');
+    console.log('');
+    console.log('Options:');
+    console.log('  -f, --force         Re-index all files, including unchanged files');
+    console.log('      --embedder      Embedder to use: openai | transformers | ollama');
+    console.log('  -h, --help          Show this help');
+    return;
+  }
 
   const projectPath = resolve(positionals[0] ?? process.cwd());
 

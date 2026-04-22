@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -122,13 +123,18 @@ export function createServer(deps: ServerDeps = {}): Server {
   // Lazy singleton state
   let indexer: Indexer | null = null;
   let currentConfig: WorkbenchConfig | null = null;
+  let currentProjectPath: string | null = null;
   let watcherStarted = false;
-  let lastStatus: { filesCount: number; chunksCount: number } | null = null;
 
   async function getIndexer(projectPath: string): Promise<{ idx: Indexer; cfg: WorkbenchConfig }> {
-    if (indexer && currentConfig) return { idx: indexer, cfg: currentConfig };
+    if (indexer && currentConfig && currentProjectPath === projectPath) {
+      return { idx: indexer, cfg: currentConfig };
+    }
+    // Path changed or first call — (re)create indexer
+    currentProjectPath = projectPath;
     currentConfig = await resolveConfig(projectPath);
     indexer = await createIndexer(currentConfig);
+    watcherStarted = false; // reset watcher state for new project
     return { idx: indexer, cfg: currentConfig };
   }
 
@@ -188,7 +194,6 @@ export function createServer(deps: ServerDeps = {}): Server {
           const projectPath = pathArg ?? (await detectProjectRoot());
           const { idx, cfg } = await getIndexer(projectPath);
           const result = await idx.index(projectPath, undefined, force ?? false);
-          lastStatus = { filesCount: result.filesIndexed, chunksCount: result.chunksIndexed };
 
           if (cfg.watchEnabled && !watcherStarted) {
             startWatcher(
@@ -256,7 +261,6 @@ export function createServer(deps: ServerDeps = {}): Server {
           const { idx } = await getIndexer(projectPath);
           await idx.clear(projectPath);
           indexer = null;
-          lastStatus = null;
           watcherStarted = false;
           return {
             content: [{ type: 'text' as const, text: JSON.stringify({ cleared: true }) }],
@@ -267,14 +271,38 @@ export function createServer(deps: ServerDeps = {}): Server {
           const projectPath = await detectProjectRoot();
           const cfg = currentConfig ?? (await resolveConfig(projectPath));
           const { modelReady, grammarsMissing } = await checkSetupStatus(cfg);
+
+          // Prefer on-disk stats so status survives server restarts
+          let indexed = false;
+          let filesCount = 0;
+          let chunksCount = 0;
+          let lastIndexedAt: number | null = null;
+
+          try {
+            const statsPath = join(cfg.indexDir, 'stats.json');
+            const raw = await readFile(statsPath, 'utf-8');
+            const stats = JSON.parse(raw) as {
+              lastIndexedAt?: number;
+              chunkCount?: number;
+              fileCount?: number;
+            };
+            indexed = true;
+            chunksCount = stats.chunkCount ?? 0;
+            filesCount = stats.fileCount ?? 0;
+            lastIndexedAt = stats.lastIndexedAt ?? null;
+          } catch {
+            // No stats.json yet — not indexed
+          }
+
           return {
             content: [
               {
                 type: 'text' as const,
                 text: JSON.stringify({
-                  indexed: lastStatus !== null,
-                  filesCount: lastStatus?.filesCount ?? 0,
-                  chunksCount: lastStatus?.chunksCount ?? 0,
+                  indexed,
+                  filesCount,
+                  chunksCount,
+                  lastIndexedAt,
                   modelReady,
                   grammarsMissing,
                 }),
