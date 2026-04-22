@@ -3,29 +3,27 @@ import { dirname, join, resolve } from 'node:path';
 import fg from 'fast-glob';
 import ignore from 'ignore';
 import pLimit from 'p-limit';
-
-import type { WorkbenchConfig } from './config-resolver.js';
-import { diffManifest, loadManifest, saveManifest } from './manifest.js';
-import type { Manifest } from './manifest.js';
 import type { Chunk, Chunker } from './chunker.js';
+import type { WorkbenchConfig } from './config-resolver.js';
 import type { Embedder } from './embedder.js';
-import { VectorStore } from './vector-store.js';
-import type { SearchResult, VectorRecord } from './vector-store.js';
+import type { Manifest } from './manifest.js';
+import { diffManifest, loadManifest, saveManifest } from './manifest.js';
+import type { SearchResult, VectorRecord, VectorStore } from './vector-store.js';
 
 // ---------------------------------------------------------------------------
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-export type { WorkbenchConfig } from './config-resolver.js';
-export { resolveConfig } from './config-resolver.js';
-export type { Manifest, ManifestDiff } from './manifest.js';
 export type { Chunk } from './chunker.js';
 export { Chunker } from './chunker.js';
+export type { WorkbenchConfig } from './config-resolver.js';
+export { resolveConfig } from './config-resolver.js';
 export type { Embedder } from './embedder.js';
 export { createEmbedder } from './embedder.js';
+export type { Manifest, ManifestDiff } from './manifest.js';
+export { checkSetupStatus, setup } from './setup.js';
 export type { SearchResult } from './vector-store.js';
 export { VectorStore } from './vector-store.js';
-export { setup, checkSetupStatus } from './setup.js';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -58,9 +56,22 @@ export interface IndexResult {
 // ---------------------------------------------------------------------------
 
 const HARD_CODED_IGNORE: string[] = [
-  'node_modules', '.git', 'dist', 'build', 'out', '__pycache__',
-  '.next', '.nuxt', 'coverage', '*.min.js', '*.d.ts', '*.map',
-  '*.lock', '*-lock.yaml', '*.snap', '.DS_Store',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'out',
+  '__pycache__',
+  '.next',
+  '.nuxt',
+  'coverage',
+  '*.min.js',
+  '*.d.ts',
+  '*.map',
+  '*.lock',
+  '*-lock.yaml',
+  '*.snap',
+  '.DS_Store',
 ];
 
 // ---------------------------------------------------------------------------
@@ -87,7 +98,11 @@ export class Indexer {
   }
 
   /** Index a project directory incrementally. */
-  async index(projectPath: string, onProgress?: ProgressCallback, force = false): Promise<IndexResult> {
+  async index(
+    projectPath: string,
+    onProgress?: ProgressCallback,
+    force = false,
+  ): Promise<IndexResult> {
     const startTime = Date.now();
     const absProjectPath = resolve(projectPath);
     const errors: Array<{ file: string; error: string }> = [];
@@ -107,7 +122,7 @@ export class Indexer {
       onlyFiles: true,
     });
 
-    const filteredPaths = rawPaths.filter(relPath => !ig.ignores(relPath));
+    const filteredPaths = rawPaths.filter((relPath) => !ig.ignores(relPath));
 
     const currentFiles: Record<string, { mtime: number; size: number }> = {};
     await Promise.all(
@@ -146,7 +161,7 @@ export class Indexer {
     let filesDone = 0;
 
     await Promise.all(
-      filesToProcess.map(relPath =>
+      filesToProcess.map((relPath) =>
         limit(async () => {
           try {
             const content = await readFile(resolve(absProjectPath, relPath), 'utf-8');
@@ -181,7 +196,7 @@ export class Indexer {
     const vectors: number[][] = [];
     for (let i = 0; i < allChunkEntries.length; i += this.config.batchSize) {
       const batch = allChunkEntries.slice(i, i + this.config.batchSize);
-      const texts = batch.map(c => c.chunk.embedText);
+      const texts = batch.map((c) => c.chunk.embedText);
       const batchVectors = await this.embedder.embed(texts);
       vectors.push(...batchVectors);
     }
@@ -196,7 +211,7 @@ export class Indexer {
       header: c.chunk.header,
       body: c.chunk.body,
       embedText: c.chunk.embedText,
-      vector: vectors[i]!,
+      vector: vectors[i] ?? [],
     }));
 
     // ----- STORE -----
@@ -209,14 +224,14 @@ export class Indexer {
       errors: [...errors],
     });
 
-    await Promise.all(diff.deleted.map(relPath => this.vectorStore.deleteByFile(relPath)));
+    await Promise.all(diff.deleted.map((relPath) => this.vectorStore.deleteByFile(relPath)));
 
     if (records.length > 0) {
       await this.vectorStore.upsert(records);
     }
 
     // Exclude errored files from manifest so they get retried next run
-    const failedFiles = new Set(errors.map(e => e.file));
+    const failedFiles = new Set(errors.map((e) => e.file));
     const finalManifest: Manifest = { ...updatedManifest };
     for (const relPath of failedFiles) {
       if (diff.new.includes(relPath)) {
@@ -261,8 +276,8 @@ export class Indexer {
   /** Search the index. */
   async search(queryText: string, topK?: number): Promise<SearchResult[]> {
     await this.ensureOpen();
-    const [queryVector] = await this.embedder.embed([queryText]);
-    return this.vectorStore.hybridSearch(queryVector!, queryText, topK ?? this.config.searchTopK);
+    const [queryVector = []] = await this.embedder.embed([queryText]);
+    return this.vectorStore.hybridSearch(queryVector, queryText, topK ?? this.config.searchTopK);
   }
 
   /** Clear the entire index (VectorStore + Manifest). */

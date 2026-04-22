@@ -4,9 +4,10 @@
  *   node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs \
  *     --test packages/cli/src/commands/index-cmd.test.ts
  */
-import { describe, it, mock, beforeEach } from 'node:test';
+
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
+import { describe, it } from 'node:test';
 import { parseArgs } from 'node:util';
 import type { WorkbenchConfig } from '@workbench/core';
 

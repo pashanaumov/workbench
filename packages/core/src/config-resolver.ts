@@ -39,9 +39,21 @@ export interface WorkbenchConfig {
 }
 
 const DEFAULT_IGNORE_PATTERNS: string[] = [
-  'node_modules', '.git', 'dist', 'build', 'out', '__pycache__',
-  '.next', '.nuxt', 'coverage', '*.min.js', '*.d.ts', '*.map',
-  '*.lock', '*.snap', '.DS_Store',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'out',
+  '__pycache__',
+  '.next',
+  '.nuxt',
+  'coverage',
+  '*.min.js',
+  '*.d.ts',
+  '*.map',
+  '*.lock',
+  '*.snap',
+  '.DS_Store',
 ];
 
 function projectHash(absPath: string): string {
@@ -95,9 +107,7 @@ async function findProjectConfig(startDir: string): Promise<Partial<WorkbenchCon
 
 // Strip undefined values so partial spreads don't clobber resolved values.
 function defined<T extends object>(obj: Partial<T>): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined),
-  ) as Partial<T>;
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
 export async function resolveConfig(
@@ -135,7 +145,7 @@ export async function resolveConfig(
 
   // openaiApiKey: fall through to env var if not set by any config source
   if (!merged.openaiApiKey) {
-    const envKey = process.env['OPENAI_API_KEY'];
+    const envKey = process.env.OPENAI_API_KEY;
     if (envKey) merged.openaiApiKey = envKey;
   }
 

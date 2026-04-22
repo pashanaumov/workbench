@@ -3,12 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build": "tsc --build",
+    "lint": "biome check packages/",
+    "lint:fix": "biome check --write --unsafe packages/",
     "build:watch": "tsc --build --watch",
     "clean": "tsc --build --clean",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "typescript": "^5.5.0"
   }
 }

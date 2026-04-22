@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-
-import { Indexer } from './indexer.js';
-import type { IndexProgress } from './indexer.js';
 import type { Chunk, Chunker } from './chunker.js';
-import type { Embedder } from './embedder.js';
-import type { SearchResult, VectorRecord, VectorStore } from './vector-store.js';
 import type { WorkbenchConfig } from './config-resolver.js';
+import type { Embedder } from './embedder.js';
+import type { IndexProgress } from './indexer.js';
+import { Indexer } from './indexer.js';
+import type { SearchResult, VectorRecord, VectorStore } from './vector-store.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,7 +58,9 @@ function makeConfig(indexDir: string): WorkbenchConfig {
 function makeMockEmbedder(dims = 3): Embedder {
   return {
     embed: async (texts: string[]) => texts.map(() => new Array<number>(dims).fill(0)),
-    get dimensions() { return dims; },
+    get dimensions() {
+      return dims;
+    },
   };
 }
 
@@ -80,30 +81,53 @@ function makeMockVectorStore(): MockVectorStore {
   let openCalled = false;
 
   const store = {
-    open: async (_dims: number) => { openCalled = true; },
-    upsert: async (records: VectorRecord[]) => { upserted.push(...records); },
-    deleteByFile: async (path: string) => { deleted.push(path); },
-    hybridSearch: async (vector: number[], text: string, topK?: number): Promise<SearchResult[]> => {
+    open: async (_dims: number) => {
+      openCalled = true;
+    },
+    upsert: async (records: VectorRecord[]) => {
+      upserted.push(...records);
+    },
+    deleteByFile: async (path: string) => {
+      deleted.push(path);
+    },
+    hybridSearch: async (
+      vector: number[],
+      text: string,
+      topK?: number,
+    ): Promise<SearchResult[]> => {
       searches.push({ vector, text, topK });
       return [];
     },
-    clear: async () => { clearCalled = true; },
+    clear: async () => {
+      clearCalled = true;
+    },
     count: async () => upserted.length,
   } as unknown as VectorStore;
 
   return {
     store,
-    get upserted() { return upserted; },
-    get deleted() { return deleted; },
-    get searches() { return searches; },
-    get clearCalled() { return clearCalled; },
-    get openCalled() { return openCalled; },
+    get upserted() {
+      return upserted;
+    },
+    get deleted() {
+      return deleted;
+    },
+    get searches() {
+      return searches;
+    },
+    get clearCalled() {
+      return clearCalled;
+    },
+    get openCalled() {
+      return openCalled;
+    },
   };
 }
 
-function makeMockChunker(
-  override?: (filePath: string, content: string) => Promise<Chunk[]>,
-): { chunker: Chunker; calledWith: string[] } {
+function makeMockChunker(override?: (filePath: string, content: string) => Promise<Chunk[]>): {
+  chunker: Chunker;
+  calledWith: string[];
+} {
   const calledWith: string[] = [];
   const chunker = {
     chunkFile: async (filePath: string, content: string): Promise<Chunk[]> => {
@@ -120,7 +144,6 @@ function makeMockChunker(
 // ---------------------------------------------------------------------------
 
 describe('Indexer', () => {
-
   // ─── scan: chunks all files ───────────────────────────────────────────────
   describe('scan', () => {
     let projectDir: string;
@@ -206,12 +229,12 @@ describe('Indexer', () => {
       calledWith.length = 0; // reset
 
       // Modify one file — wait a ms so mtime changes
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       await writeFile(join(projectDir, 'mod.ts'), 'const v = 999; // changed');
 
       const result = await indexer.index(projectDir);
       assert.equal(calledWith.length, 1);
-      assert.ok(calledWith[0]!.endsWith('mod.ts'));
+      assert.ok(calledWith[0]?.endsWith('mod.ts'));
       assert.equal(result.filesIndexed, 1);
     });
   });
@@ -242,7 +265,7 @@ describe('Indexer', () => {
       await unlink(join(projectDir, 'gone.ts'));
       await indexer.index(projectDir);
 
-      assert.ok(mvs.deleted.some(p => p.endsWith('gone.ts')));
+      assert.ok(mvs.deleted.some((p) => p.endsWith('gone.ts')));
     });
   });
 
@@ -273,9 +296,9 @@ describe('Indexer', () => {
       const result = await indexer.index(projectDir);
 
       assert.equal(result.errors.length, 1);
-      assert.ok(result.errors[0]!.file.endsWith('bad.ts'));
+      assert.ok(result.errors[0]?.file.endsWith('bad.ts'));
       assert.equal(result.filesIndexed, 1);
-      assert.ok(mvs.upserted.some(r => r.filePath.endsWith('ok.ts')));
+      assert.ok(mvs.upserted.some((r) => r.filePath.endsWith('ok.ts')));
     });
   });
 
@@ -303,7 +326,7 @@ describe('Indexer', () => {
 
       await indexer.index(projectDir);
 
-      const indexedNM = calledWith.some(p => p.includes('node_modules'));
+      const indexedNM = calledWith.some((p) => p.includes('node_modules'));
       assert.equal(indexedNM, false);
       assert.equal(calledWith.length, 1); // only src.ts
     });
@@ -345,8 +368,12 @@ describe('Indexer', () => {
   describe('search', () => {
     let indexDir: string;
 
-    before(async () => { indexDir = await makeTmp(); });
-    after(async () => { await rm(indexDir, { recursive: true, force: true }); });
+    before(async () => {
+      indexDir = await makeTmp();
+    });
+    after(async () => {
+      await rm(indexDir, { recursive: true, force: true });
+    });
 
     it('delegates to vectorStore.hybridSearch with embedded query', async () => {
       const { chunker } = makeMockChunker();
@@ -357,9 +384,9 @@ describe('Indexer', () => {
       await indexer.search('find me', 7);
 
       assert.equal(mvs.searches.length, 1);
-      assert.deepEqual(mvs.searches[0]!.vector, [0, 0, 0]);
-      assert.equal(mvs.searches[0]!.text, 'find me');
-      assert.equal(mvs.searches[0]!.topK, 7);
+      assert.deepEqual(mvs.searches[0]?.vector, [0, 0, 0]);
+      assert.equal(mvs.searches[0]?.text, 'find me');
+      assert.equal(mvs.searches[0]?.topK, 7);
     });
   });
 
@@ -396,5 +423,4 @@ describe('Indexer', () => {
       await assert.rejects(stat(manifestFile), /ENOENT/);
     });
   });
-
 });

@@ -1,5 +1,5 @@
-import type { WorkbenchConfig } from './config-resolver.js';
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';
+import type { WorkbenchConfig } from './config-resolver.js';
 
 export interface Embedder {
   embed(texts: string[]): Promise<number[][]>;
@@ -35,8 +35,12 @@ export class TransformersEmbedder implements Embedder {
     const results: number[][] = [];
     for (let i = 0; i < texts.length; i += this.batchSize) {
       const batch = texts.slice(i, i + this.batchSize);
-      const output = await pipe(batch, { pooling: 'mean', normalize: true }) as { data: Float32Array; dims: number[] };
-      const [batchSize, dims] = [output.dims[0]!, output.dims[1]!];
+      const output = (await pipe(batch, { pooling: 'mean', normalize: true })) as {
+        data: Float32Array;
+        dims: number[];
+      };
+      const batchSize = output.dims[0] ?? 0;
+      const dims = output.dims[1] ?? 0;
       for (let b = 0; b < batchSize; b++) {
         results.push(Array.from(output.data.slice(b * dims, (b + 1) * dims)));
       }
@@ -53,7 +57,10 @@ export class TransformersEmbedder implements Embedder {
 // OpenAIEmbedder
 // ---------------------------------------------------------------------------
 
-type EmbeddingsCreateFn = (opts: { model: string; input: string[] }) => Promise<{ data: Array<{ embedding: number[] }> }>;
+type EmbeddingsCreateFn = (opts: {
+  model: string;
+  input: string[];
+}) => Promise<{ data: Array<{ embedding: number[] }> }>;
 
 export class OpenAIEmbedder implements Embedder {
   private readonly apiKey: string | undefined;
@@ -123,7 +130,7 @@ export class OllamaEmbedder implements Embedder {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: this.model, prompt: text }),
         });
-        const data = await response.json() as { embedding: number[] };
+        const data = (await response.json()) as { embedding: number[] };
         if (this._dimensions === null) {
           this._dimensions = data.embedding.length;
         }
@@ -151,7 +158,6 @@ export function createEmbedder(config: WorkbenchConfig): Embedder {
       return new OpenAIEmbedder(config);
     case 'ollama':
       return new OllamaEmbedder(config);
-    case 'transformers':
     default:
       return new TransformersEmbedder(config);
   }

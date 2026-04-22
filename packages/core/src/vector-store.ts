@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
-import * as lancedb from '@lancedb/lancedb';
 import type { Connection, Table } from '@lancedb/lancedb';
+import * as lancedb from '@lancedb/lancedb';
 import type { WorkbenchConfig } from './config-resolver.js';
 
 // ---------------------------------------------------------------------------
@@ -40,7 +40,6 @@ export class VectorStore {
 
   private db: Connection | null = null;
   private table: Table | null = null;
-  private dimensions: number = 0;
   private hasFtsIndex: boolean = false;
 
   constructor(config: Pick<WorkbenchConfig, 'indexDir' | 'searchTopK'>) {
@@ -60,7 +59,7 @@ export class VectorStore {
     if (names.includes('chunks')) {
       this.table = await this.db.openTable('chunks');
       const indices = await this.table.listIndices();
-      this.hasFtsIndex = indices.some(idx => idx.name === 'embedText_idx');
+      this.hasFtsIndex = indices.some((idx) => idx.name === 'embedText_idx');
     } else {
       // LanceDB requires at least one row to infer schema (including vector dims).
       const dummy = makeDummyRecord(dimensions);
@@ -109,12 +108,12 @@ export class VectorStore {
         .rerank(reranker)
         .limit(k)
         .toArray();
-      return rows.map(row => toSearchResult(row));
+      return rows.map((row) => toSearchResult(row));
     }
 
     // Vector-only fallback
     const rows = await this.table.vectorSearch(queryVector).limit(k).toArray();
-    return rows.map(row => toSearchResult(row));
+    return rows.map((row) => toSearchResult(row));
   }
 
   /**
@@ -165,21 +164,21 @@ function makeDummyRecord(dimensions: number): Record<string, unknown> {
 function toSearchResult(row: Record<string, unknown>): SearchResult {
   // Hybrid (RRF) returns _score; vector-only returns _distance (lower = better).
   let score: number;
-  if (typeof row['_score'] === 'number') {
-    score = row['_score'] as number;
+  if (typeof row._score === 'number') {
+    score = row._score as number;
   } else {
-    const dist = typeof row['_distance'] === 'number' ? (row['_distance'] as number) : 1;
+    const dist = typeof row._distance === 'number' ? (row._distance as number) : 1;
     score = 1 / (1 + dist);
   }
 
   return {
-    id: row['id'] as string,
-    filePath: row['filePath'] as string,
-    language: row['language'] as string,
-    startLine: row['startLine'] as number,
-    endLine: row['endLine'] as number,
-    header: row['header'] as string,
-    body: row['body'] as string,
+    id: row.id as string,
+    filePath: row.filePath as string,
+    language: row.language as string,
+    startLine: row.startLine as number,
+    endLine: row.endLine as number,
+    header: row.header as string,
+    body: row.body as string,
     score,
   };
 }

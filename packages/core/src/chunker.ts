@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
-import { Language, Node, Parser } from 'web-tree-sitter';
+import { Language, type Node, Parser } from 'web-tree-sitter';
 import type { WorkbenchConfig } from './config-resolver.js';
 
 // ---------------------------------------------------------------------------
@@ -23,24 +23,42 @@ export interface Chunk {
 // Internal constants
 // ---------------------------------------------------------------------------
 
-const IGNORED_EXTENSIONS = new Set(['.d.ts', '.min.js', '.map']);
-
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
+  '.ts': 'typescript',
+  '.tsx': 'typescript',
+  '.mts': 'typescript',
+  '.cts': 'typescript',
+  '.js': 'javascript',
+  '.jsx': 'javascript',
+  '.mjs': 'javascript',
+  '.cjs': 'javascript',
   '.py': 'python',
   '.rs': 'rust',
   '.go': 'go',
   '.java': 'java',
-  '.c': 'c', '.h': 'c',
-  '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp', '.hpp': 'cpp',
+  '.c': 'c',
+  '.h': 'c',
+  '.cpp': 'cpp',
+  '.cc': 'cpp',
+  '.cxx': 'cpp',
+  '.hpp': 'cpp',
   '.rb': 'ruby',
 };
 
 // Node types to extract per language
 const FUNCTION_NODE_TYPES: Record<string, string[]> = {
-  typescript: ['function_declaration', 'method_definition', 'class_declaration', 'lexical_declaration'],
-  javascript: ['function_declaration', 'method_definition', 'class_declaration', 'lexical_declaration'],
+  typescript: [
+    'function_declaration',
+    'method_definition',
+    'class_declaration',
+    'lexical_declaration',
+  ],
+  javascript: [
+    'function_declaration',
+    'method_definition',
+    'class_declaration',
+    'lexical_declaration',
+  ],
   python: ['function_definition', 'class_definition'],
   rust: ['function_item', 'impl_item'],
   go: ['function_declaration', 'method_declaration'],
@@ -110,7 +128,10 @@ function buildEmbedText(header: string, context: string, body: string): string {
 // Chunker class
 // ---------------------------------------------------------------------------
 
-type ChunkerConfig = Pick<WorkbenchConfig, 'chunkMaxLines' | 'chunkOverlap' | 'chunkStrategy' | 'chunkMaxTokens'> & {
+type ChunkerConfig = Pick<
+  WorkbenchConfig,
+  'chunkMaxLines' | 'chunkOverlap' | 'chunkStrategy' | 'chunkMaxTokens'
+> & {
   grammarsDir: string;
 };
 
@@ -130,12 +151,12 @@ export class Chunker {
     if (this.config.chunkStrategy === 'function' && language !== 'unknown') {
       const chunks = await this.chunkByFunction(filePath, content, language, lines);
       if (chunks.length > 0) {
-        return chunks.map(c => this.applyTokenLimit(c));
+        return chunks.map((c) => this.applyTokenLimit(c));
       }
       // Fall through to sliding-window if no symbols found
     }
 
-    return this.chunkBySlidingWindow(filePath, language, lines).map(c => this.applyTokenLimit(c));
+    return this.chunkBySlidingWindow(filePath, language, lines).map((c) => this.applyTokenLimit(c));
   }
 
   // -------------------------------------------------------------------------
@@ -243,11 +264,9 @@ export class Chunker {
 
     const truncatedEmbed = chunk.embedText.slice(0, maxChars);
     // Recompute body proportionally — truncate embedText and derive body from it
-    const headerPart = chunk.header + (chunk.context ? '\n\n' + chunk.context + '\n\n' : '\n\n');
+    const headerPart = chunk.header + (chunk.context ? `\n\n${chunk.context}\n\n` : '\n\n');
     const bodyStart = headerPart.length;
-    const truncatedBody = truncatedEmbed.length > bodyStart
-      ? truncatedEmbed.slice(bodyStart)
-      : '';
+    const truncatedBody = truncatedEmbed.length > bodyStart ? truncatedEmbed.slice(bodyStart) : '';
 
     return {
       ...chunk,
@@ -261,7 +280,7 @@ export class Chunker {
   // -------------------------------------------------------------------------
 
   private async getParser(language: string): Promise<Parser | null> {
-    if (parserCache.has(language)) return parserCache.get(language)!;
+    if (parserCache.has(language)) return parserCache.get(language) as Parser;
 
     const wasmPath = join(this.config.grammarsDir, `tree-sitter-${language}.wasm`);
     if (!existsSync(wasmPath)) {
@@ -348,7 +367,9 @@ function extractSymbolName(node: Node, _language: string): string {
   }
 
   // For method in Ruby
-  const identChild = node.children.find((c: Node) => c.type === 'identifier' || c.type === 'method_name');
+  const identChild = node.children.find(
+    (c: Node) => c.type === 'identifier' || c.type === 'method_name',
+  );
   if (identChild) return identChild.text;
 
   return '<anonymous>';
@@ -390,7 +411,8 @@ function extractImportContext(
   for (const child of root.children) {
     if (importTypes.has(child.type)) {
       const row = child.startPosition.row;
-      if (row < maxLines * 3) { // only scan near the top
+      if (row < maxLines * 3) {
+        // only scan near the top
         importLines.push(row);
       }
     } else if (importLines.length > 0) {

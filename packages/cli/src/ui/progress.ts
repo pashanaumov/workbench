@@ -1,5 +1,5 @@
-import ora, { type Ora } from 'ora';
 import cliProgress from 'cli-progress';
+import ora, { type Ora } from 'ora';
 
 // SetupProgress mirrors the type from @workbench/core/setup (not re-exported at top level)
 interface SetupProgress {
@@ -33,9 +33,7 @@ export class SetupSpinner {
 
     if (this.currentPhase !== key) {
       const sizeHint =
-        progress.bytesTotal > 0
-          ? ` (${(progress.bytesTotal / 1_048_576).toFixed(0)} MB)`
-          : '';
+        progress.bytesTotal > 0 ? ` (${(progress.bytesTotal / 1_048_576).toFixed(0)} MB)` : '';
       const text = `${phaseLabel}: ${progress.item}${sizeHint}...`;
       if (this.spinner) {
         this.spinner.succeed();

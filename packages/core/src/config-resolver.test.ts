@@ -29,8 +29,12 @@ async function writeJson(dir: string, filename: string, data: object): Promise<v
 
 describe('default config', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('returns all correct defaults when no files or flags present', async () => {
     const projectPath = join(tmp, 'project');
@@ -71,8 +75,12 @@ describe('default config', () => {
 
 describe('project hash', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('indexDir encodes SHA256(projectPath).slice(0,12)', async () => {
     const projectPath = join(tmp, 'myproject');
@@ -110,8 +118,12 @@ describe('project hash', () => {
 
 describe('CLI flags override defaults', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('overrides scalar fields', async () => {
     const projectPath = join(tmp, 'project');
@@ -140,8 +152,12 @@ describe('CLI flags override defaults', () => {
 
 describe('.workbench.json overrides defaults', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('project config values override defaults', async () => {
     const projectPath = join(tmp, 'project');
@@ -172,8 +188,12 @@ describe('.workbench.json overrides defaults', () => {
 
 describe('global config (~/.workbench/config.json) overrides defaults', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('global config overrides defaults', async () => {
     const projectPath = join(tmp, 'project');
@@ -201,8 +221,12 @@ describe('global config (~/.workbench/config.json) overrides defaults', () => {
 
 describe('CLI flags win over file configs', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('CLI overrides .workbench.json, preserves other file values', async () => {
     const projectPath = join(tmp, 'project');
@@ -214,8 +238,8 @@ describe('CLI flags win over file configs', () => {
 
     const config = await resolveConfig(projectPath, { embedder: 'openai' }, homeDir);
 
-    assert.equal(config.embedder, 'openai');   // CLI wins
-    assert.equal(config.concurrency, 5);       // from file
+    assert.equal(config.embedder, 'openai'); // CLI wins
+    assert.equal(config.concurrency, 5); // from file
   });
 
   it('CLI overrides global config', async () => {
@@ -236,8 +260,12 @@ describe('CLI flags win over file configs', () => {
 
 describe('ignorePatterns merging', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('unions patterns from all sources', async () => {
     const projectPath = join(tmp, 'project');
@@ -251,16 +279,12 @@ describe('ignorePatterns merging', () => {
       ignorePatterns: ['tmp/'],
     });
 
-    const config = await resolveConfig(
-      projectPath,
-      { ignorePatterns: ['secrets/'] },
-      homeDir,
-    );
+    const config = await resolveConfig(projectPath, { ignorePatterns: ['secrets/'] }, homeDir);
 
     assert.ok(config.ignorePatterns.includes('node_modules')); // default
-    assert.ok(config.ignorePatterns.includes('*.log'));         // global
-    assert.ok(config.ignorePatterns.includes('tmp/'));          // project
-    assert.ok(config.ignorePatterns.includes('secrets/'));      // CLI
+    assert.ok(config.ignorePatterns.includes('*.log')); // global
+    assert.ok(config.ignorePatterns.includes('tmp/')); // project
+    assert.ok(config.ignorePatterns.includes('secrets/')); // CLI
   });
 
   it('deduplicates patterns that appear in multiple sources', async () => {
@@ -274,7 +298,7 @@ describe('ignorePatterns merging', () => {
 
     const config = await resolveConfig(projectPath, undefined, homeDir);
 
-    const count = config.ignorePatterns.filter(p => p === 'node_modules').length;
+    const count = config.ignorePatterns.filter((p) => p === 'node_modules').length;
     assert.equal(count, 1);
   });
 
@@ -300,8 +324,12 @@ describe('ignorePatterns merging', () => {
 
 describe('openaiApiKey from env', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('picks up OPENAI_API_KEY from env when not in any config', async () => {
     const projectPath = join(tmp, 'project');
@@ -309,12 +337,12 @@ describe('openaiApiKey from env', () => {
     const homeDir = join(tmp, 'home');
     await mkdir(homeDir, { recursive: true });
 
-    process.env['OPENAI_API_KEY'] = 'test-key-from-env';
+    process.env.OPENAI_API_KEY = 'test-key-from-env';
     try {
       const config = await resolveConfig(projectPath, undefined, homeDir);
       assert.equal(config.openaiApiKey, 'test-key-from-env');
     } finally {
-      delete process.env['OPENAI_API_KEY'];
+      delete process.env.OPENAI_API_KEY;
     }
   });
 
@@ -324,12 +352,12 @@ describe('openaiApiKey from env', () => {
     const homeDir = join(tmp, 'home2');
     await mkdir(homeDir, { recursive: true });
 
-    process.env['OPENAI_API_KEY'] = 'env-key';
+    process.env.OPENAI_API_KEY = 'env-key';
     try {
       const config = await resolveConfig(projectPath, { openaiApiKey: 'cli-key' }, homeDir);
       assert.equal(config.openaiApiKey, 'cli-key');
     } finally {
-      delete process.env['OPENAI_API_KEY'];
+      delete process.env.OPENAI_API_KEY;
     }
   });
 
@@ -339,13 +367,13 @@ describe('openaiApiKey from env', () => {
     const homeDir = join(tmp, 'home3');
     await mkdir(homeDir, { recursive: true });
 
-    const savedKey = process.env['OPENAI_API_KEY'];
-    delete process.env['OPENAI_API_KEY'];
+    const savedKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
     try {
       const config = await resolveConfig(projectPath, undefined, homeDir);
       assert.equal(config.openaiApiKey, undefined);
     } finally {
-      if (savedKey !== undefined) process.env['OPENAI_API_KEY'] = savedKey;
+      if (savedKey !== undefined) process.env.OPENAI_API_KEY = savedKey;
     }
   });
 });
@@ -356,8 +384,12 @@ describe('openaiApiKey from env', () => {
 
 describe('walk up directory tree', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('finds .workbench.json in a parent directory', async () => {
     const rootProject = join(tmp, 'root-project');
@@ -394,8 +426,12 @@ describe('walk up directory tree', () => {
 
 describe('full priority stack', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('global < project < CLI for the same field', async () => {
     const projectPath = join(tmp, 'project');

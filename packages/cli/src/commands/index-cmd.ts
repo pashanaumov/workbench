@@ -1,16 +1,16 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import type { IndexProgress, WorkbenchConfig } from '@workbench/core';
 import {
-  resolveConfig,
-  checkSetupStatus,
-  setup,
-  createEmbedder,
-  VectorStore,
   Chunker,
+  checkSetupStatus,
+  createEmbedder,
   Indexer,
+  resolveConfig,
+  setup,
+  VectorStore,
 } from '@workbench/core';
-import type { WorkbenchConfig, IndexProgress } from '@workbench/core';
-import { SetupSpinner, createIndexBars } from '../ui/progress.js';
+import { createIndexBars, SetupSpinner } from '../ui/progress.js';
 
 export async function indexCmd(rawArgs: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
@@ -28,7 +28,9 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
   const cliFlags: Partial<WorkbenchConfig> = {};
   if (values.embedder) {
     if (!['openai', 'transformers', 'ollama'].includes(values.embedder)) {
-      console.error(`wb: unknown embedder '${values.embedder}' (choose: openai, transformers, ollama)`);
+      console.error(
+        `wb: unknown embedder '${values.embedder}' (choose: openai, transformers, ollama)`,
+      );
       process.exit(1);
     }
     cliFlags.embedder = values.embedder as WorkbenchConfig['embedder'];
@@ -69,17 +71,21 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
   const bars = createIndexBars();
   const startTime = Date.now();
 
-  const result = await indexer.index(projectPath, (progress: IndexProgress) => {
-    if (progress.phase === 'scan') {
-      bars.updateScan(progress.filesDone, Math.max(progress.filesTotal, 1));
-    } else if (progress.phase === 'embed' || progress.phase === 'store') {
-      bars.updateScan(progress.filesTotal, progress.filesTotal); // scan complete
-      bars.updateEmbed(progress.chunksDone, Math.max(progress.chunksTotal, 1));
-    } else if (progress.phase === 'done') {
-      bars.updateScan(progress.filesTotal, progress.filesTotal);
-      bars.updateEmbed(progress.chunksTotal, progress.chunksTotal);
-    }
-  }, values.force);
+  const result = await indexer.index(
+    projectPath,
+    (progress: IndexProgress) => {
+      if (progress.phase === 'scan') {
+        bars.updateScan(progress.filesDone, Math.max(progress.filesTotal, 1));
+      } else if (progress.phase === 'embed' || progress.phase === 'store') {
+        bars.updateScan(progress.filesTotal, progress.filesTotal); // scan complete
+        bars.updateEmbed(progress.chunksDone, Math.max(progress.chunksTotal, 1));
+      } else if (progress.phase === 'done') {
+        bars.updateScan(progress.filesTotal, progress.filesTotal);
+        bars.updateEmbed(progress.chunksTotal, progress.chunksTotal);
+      }
+    },
+    values.force,
+  );
 
   bars.stop();
 
@@ -88,9 +94,7 @@ export async function indexCmd(rawArgs: string[]): Promise<void> {
   console.log(
     `\n✓ Indexed ${result.filesIndexed} files (${chunksFormatted} chunks) in ${durationSec}s`,
   );
-  console.log(
-    `  ${result.filesUnchanged} files unchanged, ${result.errors.length} errors`,
-  );
+  console.log(`  ${result.filesUnchanged} files unchanged, ${result.errors.length} errors`);
 
   if (result.errors.length > 0) {
     console.error('\nErrors:');

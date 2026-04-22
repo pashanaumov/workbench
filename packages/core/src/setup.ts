@@ -14,7 +14,7 @@ export interface SetupProgress {
   item: string;
   bytesTotal: number; // 0 if unknown (no content-length)
   bytesDone: number;
-  skipped: boolean;   // true if already cached
+  skipped: boolean; // true if already cached
 }
 
 export type ProgressCallback = (progress: SetupProgress) => void;
@@ -40,8 +40,15 @@ const HF_FILES = [
 ] as const;
 
 const GRAMMAR_LANGUAGES = [
-  'typescript', 'javascript', 'python', 'rust', 'go',
-  'java', 'c', 'cpp', 'ruby',
+  'typescript',
+  'javascript',
+  'python',
+  'rust',
+  'go',
+  'java',
+  'c',
+  'cpp',
+  'ruby',
 ] as const;
 
 const OPENAI_TIP = [
@@ -82,7 +89,7 @@ async function downloadFile(
   let bytesDone = 0;
 
   const ws = createWriteStream(destPath);
-  const reader = response.body!.getReader();
+  const reader = response.body?.getReader();
 
   await new Promise<void>((resolve, reject) => {
     ws.on('finish', resolve);
@@ -122,18 +129,18 @@ export async function checkSetupStatus(
   const modelDir = join(config.modelsDir, ...config.transformersModel.split('/'));
 
   const modelChecks = await Promise.all(
-    HF_FILES.map(file => fileExists(join(modelDir, ...file.split('/')))),
+    HF_FILES.map((file) => fileExists(join(modelDir, ...file.split('/')))),
   );
   const modelReady = modelChecks.every(Boolean);
 
   const grammarsMissing: string[] = [];
 
-  if (!await fileExists(join(config.grammarsDir, 'tree-sitter.wasm'))) {
+  if (!(await fileExists(join(config.grammarsDir, 'tree-sitter.wasm')))) {
     grammarsMissing.push('tree-sitter.wasm');
   }
   for (const lang of GRAMMAR_LANGUAGES) {
     const filename = `tree-sitter-${lang}.wasm`;
-    if (!await fileExists(join(config.grammarsDir, filename))) {
+    if (!(await fileExists(join(config.grammarsDir, filename)))) {
       grammarsMissing.push(filename);
     }
   }
@@ -178,7 +185,13 @@ export async function setup(options: SetupOptions): Promise<string[]> {
 
   const wasmCorePath = join(config.grammarsDir, 'tree-sitter.wasm');
   if (await fileExists(wasmCorePath)) {
-    onProgress?.({ phase: 'grammars', item: 'tree-sitter.wasm', bytesTotal: 0, bytesDone: 0, skipped: true });
+    onProgress?.({
+      phase: 'grammars',
+      item: 'tree-sitter.wasm',
+      bytesTotal: 0,
+      bytesDone: 0,
+      skipped: true,
+    });
   } else {
     await downloadFile(
       'https://cdn.jsdelivr.net/npm/web-tree-sitter@latest/tree-sitter.wasm',
@@ -196,7 +209,13 @@ export async function setup(options: SetupOptions): Promise<string[]> {
     const destPath = join(config.grammarsDir, filename);
 
     if (await fileExists(destPath)) {
-      onProgress?.({ phase: 'grammars', item: filename, bytesTotal: 0, bytesDone: 0, skipped: true });
+      onProgress?.({
+        phase: 'grammars',
+        item: filename,
+        bytesTotal: 0,
+        bytesDone: 0,
+        skipped: true,
+      });
       continue;
     }
 

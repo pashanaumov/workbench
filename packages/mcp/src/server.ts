@@ -1,8 +1,8 @@
-import type { Indexer, WorkbenchConfig } from '@workbench/core';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import type { Indexer, WorkbenchConfig } from '@workbench/core';
 
 // ---------------------------------------------------------------------------
 // DI interface
@@ -26,7 +26,7 @@ export interface ServerDeps {
 // ---------------------------------------------------------------------------
 
 export async function detectProjectRoot(): Promise<string> {
-  const envPath = process.env['WORKBENCH_PROJECT_PATH'];
+  const envPath = process.env.WORKBENCH_PROJECT_PATH;
   if (envPath) return envPath;
 
   let dir = process.cwd();
@@ -49,7 +49,12 @@ async function defaultResolveConfig(projectPath: string): Promise<WorkbenchConfi
 }
 
 async function defaultCreateIndexer(config: WorkbenchConfig): Promise<Indexer> {
-  const { createEmbedder, Chunker, VectorStore, Indexer: IndexerClass } = await import('@workbench/core');
+  const {
+    createEmbedder,
+    Chunker,
+    VectorStore,
+    Indexer: IndexerClass,
+  } = await import('@workbench/core');
   const embedder = createEmbedder(config);
   const vectorStore = new VectorStore(config);
   const chunker = new Chunker(config);
@@ -68,27 +73,33 @@ function defaultStartWatcher(
   indexFn: () => Promise<void>,
   opts: { debounceMs: number },
 ): void {
-  import('chokidar').then(({ watch }) => {
-    let debounceTimer: NodeJS.Timeout | undefined;
-    let indexing = false;
+  import('chokidar')
+    .then(({ watch }) => {
+      let debounceTimer: NodeJS.Timeout | undefined;
+      let indexing = false;
 
-    const watcher = watch(projectPath, {
-      ignored: /(^|[/\\])(\.git|node_modules|dist)($|[/\\])/,
-      persistent: false,
-      ignoreInitial: true,
-    });
+      const watcher = watch(projectPath, {
+        ignored: /(^|[/\\])(\.git|node_modules|dist)($|[/\\])/,
+        persistent: false,
+        ignoreInitial: true,
+      });
 
-    watcher.on('all', () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(async () => {
-        if (indexing) return;
-        indexing = true;
-        try { await indexFn(); } finally { indexing = false; }
-      }, opts.debounceMs);
+      watcher.on('all', () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          if (indexing) return;
+          indexing = true;
+          try {
+            await indexFn();
+          } finally {
+            indexing = false;
+          }
+        }, opts.debounceMs);
+      });
+    })
+    .catch(() => {
+      // chokidar unavailable — skip watcher
     });
-  }).catch(() => {
-    // chokidar unavailable — skip watcher
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -174,26 +185,34 @@ export function createServer(deps: ServerDeps = {}): Server {
       switch (name) {
         case 'index_codebase': {
           const { path: pathArg } = args as { path?: string; force?: boolean };
-          const projectPath = pathArg ?? await detectProjectRoot();
+          const projectPath = pathArg ?? (await detectProjectRoot());
           const { idx, cfg } = await getIndexer(projectPath);
           const result = await idx.index(projectPath);
           lastStatus = { filesCount: result.filesIndexed, chunksCount: result.chunksIndexed };
 
           if (cfg.watchEnabled && !watcherStarted) {
-            startWatcher(projectPath, async () => { await idx.index(projectPath); }, { debounceMs: cfg.watchDebounceMs });
+            startWatcher(
+              projectPath,
+              async () => {
+                await idx.index(projectPath);
+              },
+              { debounceMs: cfg.watchDebounceMs },
+            );
             watcherStarted = true;
           }
 
           return {
-            content: [{
-              type: 'text' as const,
-              text: JSON.stringify({
-                filesIndexed: result.filesIndexed,
-                chunksIndexed: result.chunksIndexed,
-                durationMs: result.durationMs,
-                errors: result.errors,
-              }),
-            }],
+            content: [
+              {
+                type: 'text' as const,
+                text: JSON.stringify({
+                  filesIndexed: result.filesIndexed,
+                  chunksIndexed: result.chunksIndexed,
+                  durationMs: result.durationMs,
+                  errors: result.errors,
+                }),
+              },
+            ],
           };
         }
 
@@ -201,7 +220,12 @@ export function createServer(deps: ServerDeps = {}): Server {
           const { query, topK } = args as { query?: string; topK?: number };
           if (!query) {
             return {
-              content: [{ type: 'text' as const, text: JSON.stringify({ error: 'query parameter is required' }) }],
+              content: [
+                {
+                  type: 'text' as const,
+                  text: JSON.stringify({ error: 'query parameter is required' }),
+                },
+              ],
               isError: true,
             };
           }
@@ -209,17 +233,21 @@ export function createServer(deps: ServerDeps = {}): Server {
           const { idx } = await getIndexer(projectPath);
           const results = await idx.search(query, topK);
           return {
-            content: [{
-              type: 'text' as const,
-              text: JSON.stringify(results.map(r => ({
-                file: r.filePath,
-                startLine: r.startLine,
-                endLine: r.endLine,
-                content: r.body,
-                score: r.score,
-                language: r.language,
-              }))),
-            }],
+            content: [
+              {
+                type: 'text' as const,
+                text: JSON.stringify(
+                  results.map((r) => ({
+                    file: r.filePath,
+                    startLine: r.startLine,
+                    endLine: r.endLine,
+                    content: r.body,
+                    score: r.score,
+                    language: r.language,
+                  })),
+                ),
+              },
+            ],
           };
         }
 
@@ -237,25 +265,29 @@ export function createServer(deps: ServerDeps = {}): Server {
 
         case 'get_indexing_status': {
           const projectPath = await detectProjectRoot();
-          const cfg = currentConfig ?? await resolveConfig(projectPath);
+          const cfg = currentConfig ?? (await resolveConfig(projectPath));
           const { modelReady, grammarsMissing } = await checkSetupStatus(cfg);
           return {
-            content: [{
-              type: 'text' as const,
-              text: JSON.stringify({
-                indexed: lastStatus !== null,
-                filesCount: lastStatus?.filesCount ?? 0,
-                chunksCount: lastStatus?.chunksCount ?? 0,
-                modelReady,
-                grammarsMissing,
-              }),
-            }],
+            content: [
+              {
+                type: 'text' as const,
+                text: JSON.stringify({
+                  indexed: lastStatus !== null,
+                  filesCount: lastStatus?.filesCount ?? 0,
+                  chunksCount: lastStatus?.chunksCount ?? 0,
+                  modelReady,
+                  grammarsMissing,
+                }),
+              },
+            ],
           };
         }
 
         default:
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify({ error: `Unknown tool: ${name}` }) }],
+            content: [
+              { type: 'text' as const, text: JSON.stringify({ error: `Unknown tool: ${name}` }) },
+            ],
             isError: true,
           };
       }

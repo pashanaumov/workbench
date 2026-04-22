@@ -46,8 +46,12 @@ describe('loadManifest', () => {
 
 describe('saveManifest', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('creates directories and writes correctly', async () => {
     const mPath = join(tmp, 'deep', 'nested', 'manifest.json');
@@ -75,19 +79,19 @@ describe('saveManifest', () => {
 
 describe('diffManifest', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('identifies new files not in stored manifest', async () => {
     const content = 'new file content';
     await touch(join(tmp, 'new.ts'), content);
     const s = await stat(join(tmp, 'new.ts'));
 
-    const { diff } = await diffManifest(
-      tmp,
-      { 'new.ts': { mtime: s.mtimeMs, size: s.size } },
-      {},
-    );
+    const { diff } = await diffManifest(tmp, { 'new.ts': { mtime: s.mtimeMs, size: s.size } }, {});
     assert.deepEqual(diff.new, ['new.ts']);
     assert.deepEqual(diff.changed, []);
     assert.deepEqual(diff.deleted, []);
@@ -162,8 +166,12 @@ describe('diffManifest', () => {
 
 describe('updateManifest', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('writes correct entries for new files', async () => {
     const content = 'update me';

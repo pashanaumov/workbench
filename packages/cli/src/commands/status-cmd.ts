@@ -1,13 +1,7 @@
-import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import {
-  resolveConfig,
-  checkSetupStatus,
-  VectorStore,
-  createEmbedder,
-} from '@workbench/core';
+import { join, resolve } from 'node:path';
 import type { WorkbenchConfig } from '@workbench/core';
+import { checkSetupStatus, createEmbedder, resolveConfig, VectorStore } from '@workbench/core';
 
 function timeAgo(ms: number): string {
   const sec = Math.floor(ms / 1000);
@@ -68,9 +62,12 @@ export async function statusCmd(): Promise<void> {
 
   const providerLabel = (() => {
     switch (config.embedder) {
-      case 'openai': return `openai (${config.openaiModel})`;
-      case 'ollama': return `ollama (${config.ollamaModel})`;
-      default: return `local (${config.transformersModel.split('/').pop()})`;
+      case 'openai':
+        return `openai (${config.openaiModel})`;
+      case 'ollama':
+        return `ollama (${config.ollamaModel})`;
+      default:
+        return `local (${config.transformersModel.split('/').pop()})`;
     }
   })();
 
@@ -80,7 +77,7 @@ export async function statusCmd(): Promise<void> {
   console.log(`Index:    ${config.indexDir}`);
   console.log(`Provider: ${providerLabel}`);
 
-  if (config.embedder === 'transformers' && !process.env['OPENAI_API_KEY']) {
+  if (config.embedder === 'transformers' && !process.env.OPENAI_API_KEY) {
     console.log('          Tip: 5-20x faster with OpenAI — set OPENAI_API_KEY');
   }
 
@@ -108,7 +105,9 @@ export async function statusCmd(): Promise<void> {
   if (config.embedder === 'transformers') {
     const modelName = config.transformersModel.split('/').pop() ?? config.transformersModel;
     const modelIcon = setupStatus.modelReady ? '✓' : '✗';
-    console.log(`  ${modelIcon} Model: ${modelName} (${setupStatus.modelReady ? 'ready' : 'not downloaded'})`);
+    console.log(
+      `  ${modelIcon} Model: ${modelName} (${setupStatus.modelReady ? 'ready' : 'not downloaded'})`,
+    );
   } else {
     console.log(`  — Model: n/a (using ${config.embedder})`);
   }

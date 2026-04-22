@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { VectorStore } from './vector-store.js';
 import type { VectorRecord } from './vector-store.js';
+import { VectorStore } from './vector-store.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,9 +33,8 @@ function makeAuthChunk(n: 1 | 2): VectorRecord {
     header: `auth.ts > authenticateUser (function)`,
     body: `function authenticateUser(token: string) { /* jwt validation */ }`,
     embedText: `auth.ts > authenticateUser (function)\n\njwt authentication token login validation user password bearer`,
-    vector: n === 1
-      ? [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      : [0.9, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    vector:
+      n === 1 ? [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.9, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
 }
 
@@ -49,9 +48,8 @@ function makeDbChunk(n: 1 | 2): VectorRecord {
     header: `database.ts > queryPool (function)`,
     body: `function queryPool(sql: string) { /* connection pool */ }`,
     embedText: `database.ts > queryPool (function)\n\nsql query connection pool database transaction execute`,
-    vector: n === 1
-      ? [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      : [0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    vector:
+      n === 1 ? [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
 }
 
@@ -65,16 +63,18 @@ function makeUiChunk(n: 1 | 2): VectorRecord {
     header: `ui.ts > renderComponent (function)`,
     body: `function renderComponent(props: Props) { /* react render */ }`,
     embedText: `ui.ts > renderComponent (function)\n\nreact component render view button state hook`,
-    vector: n === 1
-      ? [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      : [0.0, 0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0],
+    vector:
+      n === 1 ? [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0] : [0.0, 0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0],
   };
 }
 
 const CORPUS: VectorRecord[] = [
-  makeAuthChunk(1), makeAuthChunk(2),
-  makeDbChunk(1), makeDbChunk(2),
-  makeUiChunk(1), makeUiChunk(2),
+  makeAuthChunk(1),
+  makeAuthChunk(2),
+  makeDbChunk(1),
+  makeDbChunk(2),
+  makeUiChunk(1),
+  makeUiChunk(2),
 ];
 
 // ---------------------------------------------------------------------------
@@ -97,8 +97,12 @@ async function openStore(dir: string): Promise<VectorStore> {
 
 describe('open', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('creates a new table if one does not exist', async () => {
     const store = await openStore(tmp);
@@ -120,8 +124,12 @@ describe('open', () => {
 
 describe('upsert and count', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('upsert adds records and count() returns the right number', async () => {
     const store = await openStore(tmp);
@@ -144,8 +152,12 @@ describe('upsert and count', () => {
 
 describe('deleteByFile', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('removes only records for the specified file', async () => {
     const store = await openStore(tmp);
@@ -170,8 +182,12 @@ describe('deleteByFile', () => {
 
 describe('clear', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('empties the table', async () => {
     const store = await openStore(tmp);
@@ -203,30 +219,38 @@ describe('hybridSearch retrieval quality', () => {
     store = await openStore(tmp);
     await store.upsert(CORPUS);
   });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('query "jwt token validation" → auth.ts in top 3', async () => {
     // Query vector is aligned with auth chunks (dim 0).
     const queryVec = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     const results = await store.hybridSearch(queryVec, 'jwt token validation', 3);
     assert.ok(results.length > 0, 'should return results');
-    const filePaths = results.map(r => r.filePath);
-    assert.ok(filePaths.includes('auth.ts'), `expected auth.ts in top 3, got: ${filePaths.join(', ')}`);
+    const filePaths = results.map((r) => r.filePath);
+    assert.ok(
+      filePaths.includes('auth.ts'),
+      `expected auth.ts in top 3, got: ${filePaths.join(', ')}`,
+    );
   });
 
   it('query "sql connection pool" → database.ts in top 3', async () => {
     const queryVec = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     const results = await store.hybridSearch(queryVec, 'sql connection pool', 3);
     assert.ok(results.length > 0, 'should return results');
-    const filePaths = results.map(r => r.filePath);
-    assert.ok(filePaths.includes('database.ts'), `expected database.ts in top 3, got: ${filePaths.join(', ')}`);
+    const filePaths = results.map((r) => r.filePath);
+    assert.ok(
+      filePaths.includes('database.ts'),
+      `expected database.ts in top 3, got: ${filePaths.join(', ')}`,
+    );
   });
 
   it('query "react component render" → ui.ts in top 3', async () => {
     const queryVec = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     const results = await store.hybridSearch(queryVec, 'react component render', 3);
     assert.ok(results.length > 0, 'should return results');
-    const filePaths = results.map(r => r.filePath);
+    const filePaths = results.map((r) => r.filePath);
     assert.ok(filePaths.includes('ui.ts'), `expected ui.ts in top 3, got: ${filePaths.join(', ')}`);
   });
 

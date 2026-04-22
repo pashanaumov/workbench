@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-
+import type { WorkbenchConfig } from './config-resolver.js';
 import {
   createEmbedder,
-  TransformersEmbedder,
-  OpenAIEmbedder,
   OllamaEmbedder,
+  OpenAIEmbedder,
+  TransformersEmbedder,
 } from './embedder.js';
-import type { WorkbenchConfig } from './config-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Shared minimal config fixture
@@ -74,7 +73,11 @@ describe('OpenAIEmbedder', () => {
   }
 
   it('dimensions returns 1536', () => {
-    const e = new OpenAIEmbedder({ openaiApiKey: 'sk-test', openaiModel: 'text-embedding-3-small', batchSize: 32 });
+    const e = new OpenAIEmbedder({
+      openaiApiKey: 'sk-test',
+      openaiModel: 'text-embedding-3-small',
+      batchSize: 32,
+    });
     assert.equal(e.dimensions, 1536);
   });
 
@@ -133,7 +136,7 @@ describe('OllamaEmbedder', () => {
       const result = await embedder.embed(['hello', 'world']);
       assert.equal(result.length, 2);
       assert.equal(embedder.dimensions, DIMS);
-      assert.ok(calls.urls.every(u => u === 'http://localhost:11434/api/embeddings'));
+      assert.ok(calls.urls.every((u) => u === 'http://localhost:11434/api/embeddings'));
       assert.equal(calls.urls.length, 2);
     } finally {
       globalThis.fetch = origFetch;

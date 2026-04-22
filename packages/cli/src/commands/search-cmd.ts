@@ -1,11 +1,12 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
-  resolveConfig,
-  createEmbedder,
-  VectorStore,
   Chunker,
+  createEmbedder,
   Indexer,
+  resolveConfig,
+  type SearchResult,
+  VectorStore,
 } from '@workbench/core';
 
 export async function searchCmd(rawArgs: string[]): Promise<void> {
@@ -26,7 +27,7 @@ export async function searchCmd(rawArgs: string[]): Promise<void> {
   }
 
   const topK = parseInt(values.top ?? '5', 10);
-  if (isNaN(topK) || topK < 1) {
+  if (Number.isNaN(topK) || topK < 1) {
     console.error('wb search: --top must be a positive integer');
     process.exit(1);
   }
@@ -39,7 +40,7 @@ export async function searchCmd(rawArgs: string[]): Promise<void> {
   const chunker = new Chunker(config);
   const indexer = new Indexer(config, embedder, vectorStore, chunker);
 
-  let results;
+  let results: SearchResult[];
   try {
     results = await indexer.search(query, topK);
   } catch (err) {

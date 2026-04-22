@@ -1,13 +1,7 @@
 import { resolve } from 'node:path';
-import { parseArgs } from 'node:util';
 import { createInterface } from 'node:readline';
-import {
-  resolveConfig,
-  createEmbedder,
-  VectorStore,
-  Chunker,
-  Indexer,
-} from '@workbench/core';
+import { parseArgs } from 'node:util';
+import { Chunker, createEmbedder, Indexer, resolveConfig, VectorStore } from '@workbench/core';
 
 async function confirm(question: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });

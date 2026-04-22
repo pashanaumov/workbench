@@ -1,13 +1,11 @@
-import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { after, describe, test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-
-import { detectProjectRoot, createServer } from './server.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { ServerDeps } from './server.js';
+import { createServer, detectProjectRoot } from './server.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,20 +13,40 @@ import type { ServerDeps } from './server.js';
 
 type MockIndexer = {
   index: (path: string) => Promise<{
-    filesIndexed: number; chunksIndexed: number; durationMs: number;
-    errors: { file: string; error: string }[]; filesDeleted: number; filesUnchanged: number;
+    filesIndexed: number;
+    chunksIndexed: number;
+    durationMs: number;
+    errors: { file: string; error: string }[];
+    filesDeleted: number;
+    filesUnchanged: number;
   }>;
-  search: (query: string, topK?: number) => Promise<{
-    filePath: string; startLine: number; endLine: number; body: string; score: number; language: string; id: string; header: string;
-  }[]>;
+  search: (
+    query: string,
+    topK?: number,
+  ) => Promise<
+    {
+      filePath: string;
+      startLine: number;
+      endLine: number;
+      body: string;
+      score: number;
+      language: string;
+      id: string;
+      header: string;
+    }[]
+  >;
   clear: (path: string) => Promise<void>;
 };
 
 function makeMockIndexer(overrides?: Partial<MockIndexer>): MockIndexer {
   return {
     index: async (_path) => ({
-      filesIndexed: 3, chunksIndexed: 10, durationMs: 50,
-      errors: [], filesDeleted: 0, filesUnchanged: 0,
+      filesIndexed: 3,
+      chunksIndexed: 10,
+      durationMs: 50,
+      errors: [],
+      filesDeleted: 0,
+      filesUnchanged: 0,
     }),
     search: async () => [],
     clear: async () => {},
@@ -66,7 +84,9 @@ function makeMockDeps(overrides?: Partial<ServerDeps>): ServerDeps {
   };
 }
 
-async function makeTestClient(deps: ServerDeps = {}): Promise<{ client: Client; close: () => Promise<void> }> {
+async function makeTestClient(
+  deps: ServerDeps = {},
+): Promise<{ client: Client; close: () => Promise<void> }> {
   const server = createServer(deps);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -86,37 +106,34 @@ async function makeTestClient(deps: ServerDeps = {}): Promise<{ client: Client; 
 
 describe('detectProjectRoot', () => {
   test('uses WORKBENCH_PROJECT_PATH env var when set', async () => {
-    const original = process.env['WORKBENCH_PROJECT_PATH'];
-    process.env['WORKBENCH_PROJECT_PATH'] = '/custom/project/path';
+    const original = process.env.WORKBENCH_PROJECT_PATH;
+    process.env.WORKBENCH_PROJECT_PATH = '/custom/project/path';
     try {
       const result = await detectProjectRoot();
       assert.equal(result, '/custom/project/path');
     } finally {
-      if (original === undefined) delete process.env['WORKBENCH_PROJECT_PATH'];
-      else process.env['WORKBENCH_PROJECT_PATH'] = original;
+      if (original === undefined) delete process.env.WORKBENCH_PROJECT_PATH;
+      else process.env.WORKBENCH_PROJECT_PATH = original;
     }
   });
 
   // 2. detectProjectRoot: walks up to find .git
   test('walks up to find .git directory', async () => {
-    const original = process.env['WORKBENCH_PROJECT_PATH'];
-    delete process.env['WORKBENCH_PROJECT_PATH'];
+    const original = process.env.WORKBENCH_PROJECT_PATH;
+    delete process.env.WORKBENCH_PROJECT_PATH;
     try {
       const result = await detectProjectRoot();
       // Running from the workbench repo — should find .git
-      assert.ok(
-        existsSync(join(result, '.git')),
-        `Expected .git at ${result}`,
-      );
+      assert.ok(existsSync(join(result, '.git')), `Expected .git at ${result}`);
     } finally {
-      if (original !== undefined) process.env['WORKBENCH_PROJECT_PATH'] = original;
+      if (original !== undefined) process.env.WORKBENCH_PROJECT_PATH = original;
     }
   });
 
   // 3. detectProjectRoot: falls back to cwd
   test('falls back to cwd when no .git found', async () => {
-    const original = process.env['WORKBENCH_PROJECT_PATH'];
-    delete process.env['WORKBENCH_PROJECT_PATH'];
+    const original = process.env.WORKBENCH_PROJECT_PATH;
+    delete process.env.WORKBENCH_PROJECT_PATH;
     const origCwd = process.cwd;
     // Override cwd to filesystem root — no .git will be found walking up
     process.cwd = () => '/';
@@ -125,7 +142,7 @@ describe('detectProjectRoot', () => {
       assert.equal(result, '/');
     } finally {
       process.cwd = origCwd;
-      if (original !== undefined) process.env['WORKBENCH_PROJECT_PATH'] = original;
+      if (original !== undefined) process.env.WORKBENCH_PROJECT_PATH = original;
     }
   });
 });
@@ -139,7 +156,7 @@ test('server exposes all 4 tools', async () => {
   after(close);
 
   const { tools } = await client.listTools();
-  const names = tools.map(t => t.name);
+  const names = tools.map((t) => t.name);
 
   assert.ok(names.includes('index_codebase'), 'missing index_codebase');
   assert.ok(names.includes('search_code'), 'missing search_code');
@@ -165,7 +182,7 @@ test('get_indexing_status returns correct shape with mocked core', async () => {
   const result = await client.callTool({ name: 'get_indexing_status', arguments: {} });
   assert.ok(!result.isError, `Expected no error, got: ${JSON.stringify(result.content)}`);
 
-  const text = (result.content as { type: string; text: string }[])[0]!.text;
+  const text = (result.content as { type: string; text: string }[])[0]?.text;
   const status = JSON.parse(text) as {
     indexed: boolean;
     filesCount: number;
@@ -195,9 +212,12 @@ test('search_code returns error when query is missing', async () => {
   const result = await client.callTool({ name: 'search_code', arguments: {} });
   assert.ok(result.isError, 'Expected isError to be true');
 
-  const text = (result.content as { type: string; text: string }[])[0]!.text;
+  const text = (result.content as { type: string; text: string }[])[0]?.text;
   const body = JSON.parse(text) as { error: string };
-  assert.ok(body.error.toLowerCase().includes('query'), `Expected error about query, got: ${body.error}`);
+  assert.ok(
+    body.error.toLowerCase().includes('query'),
+    `Expected error about query, got: ${body.error}`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -207,7 +227,9 @@ test('search_code returns error when query is missing', async () => {
 test('watcher is not started when watchEnabled is false', async () => {
   let watcherCalled = false;
   const deps = makeMockDeps({
-    startWatcher: () => { watcherCalled = true; },
+    startWatcher: () => {
+      watcherCalled = true;
+    },
     resolveConfig: async (_path) => ({
       indexDir: '/mock/index',
       modelsDir: '/mock/models',

@@ -6,13 +6,15 @@ import { Chunker } from './chunker.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeChunker(overrides: Partial<{
-  chunkMaxLines: number;
-  chunkOverlap: number;
-  chunkStrategy: 'sliding-window' | 'function';
-  chunkMaxTokens: number;
-  grammarsDir: string;
-}> = {}) {
+function makeChunker(
+  overrides: Partial<{
+    chunkMaxLines: number;
+    chunkOverlap: number;
+    chunkStrategy: 'sliding-window' | 'function';
+    chunkMaxTokens: number;
+    grammarsDir: string;
+  }> = {},
+) {
   return new Chunker({
     chunkMaxLines: overrides.chunkMaxLines ?? 50,
     chunkOverlap: overrides.chunkOverlap ?? 0.2,

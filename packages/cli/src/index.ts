@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { VERSION } from '@workbench/core';
-import { indexCmd } from './commands/index-cmd.js';
-import { statusCmd } from './commands/status-cmd.js';
-import { searchCmd } from './commands/search-cmd.js';
 import { clearCmd } from './commands/clear-cmd.js';
+import { indexCmd } from './commands/index-cmd.js';
+import { searchCmd } from './commands/search-cmd.js';
+import { statusCmd } from './commands/status-cmd.js';
 
 const command = process.argv[2];
 const restArgs = process.argv.slice(3);
@@ -49,7 +49,9 @@ try {
   }
 } catch (err) {
   if ((err as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') {
-    console.error('wb: @workbench/core could not be loaded. Run `pnpm run build` from the repo root first.');
+    console.error(
+      'wb: @workbench/core could not be loaded. Run `pnpm run build` from the repo root first.',
+    );
     process.exit(1);
   }
   console.error(`wb: unexpected error — ${(err as Error).message ?? String(err)}`);

@@ -7,7 +7,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

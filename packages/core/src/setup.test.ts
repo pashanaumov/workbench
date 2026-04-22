@@ -67,8 +67,12 @@ describe('checkSetupStatus with non-existent dirs', () => {
 
 describe('checkSetupStatus with pre-populated dirs', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('reports modelReady:true and no grammars missing', async () => {
     const modelsDir = join(tmp, 'models');
@@ -114,8 +118,12 @@ describe('checkSetupStatus with pre-populated dirs', () => {
 
 describe('setup with mock fetch', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('calls onProgress for all model + grammar files and returns downloaded list', async () => {
     const mockFetch = makeMockFetch();
@@ -140,11 +148,14 @@ describe('setup with mock fetch', () => {
     assert.ok(downloaded.includes('tree-sitter-typescript.wasm'));
 
     // All non-done progress events should be non-skipped (fresh dirs)
-    const nonDone = progressEvents.filter(e => e.item !== '');
-    assert.ok(nonDone.every(e => !e.skipped), 'all non-done events should not be skipped');
+    const nonDone = progressEvents.filter((e) => e.item !== '');
+    assert.ok(
+      nonDone.every((e) => !e.skipped),
+      'all non-done events should not be skipped',
+    );
 
     // done event emitted at end
-    const doneEvents = progressEvents.filter(e => e.item === '');
+    const doneEvents = progressEvents.filter((e) => e.item === '');
     assert.equal(doneEvents.length, 1);
 
     // fetch called once per downloaded file
@@ -158,8 +169,12 @@ describe('setup with mock fetch', () => {
 
 describe('setup skips already-present files', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('skips model files that exist on disk', async () => {
     const modelsDir = join(tmp, 'models');
@@ -175,15 +190,17 @@ describe('setup skips already-present files', () => {
 
     await setup({
       config: { modelsDir, grammarsDir, embedder: 'transformers', transformersModel: BASE_MODEL },
-      onProgress: (p) => { if (p.skipped) skippedItems.push(p.item); },
+      onProgress: (p) => {
+        if (p.skipped) skippedItems.push(p.item);
+      },
       _fetch: mockFetch,
     });
 
     assert.ok(skippedItems.includes('onnx/model_quantized.onnx'));
     assert.ok(skippedItems.includes('tokenizer.json'));
     // fetch should NOT have been called for the two cached files
-    assert.ok(!mockFetch.calls.some(url => url.includes('model_quantized.onnx')));
-    assert.ok(!mockFetch.calls.some(url => url.includes('tokenizer.json')));
+    assert.ok(!mockFetch.calls.some((url) => url.includes('model_quantized.onnx')));
+    assert.ok(!mockFetch.calls.some((url) => url.includes('tokenizer.json')));
   });
 
   it('skips grammar files that already exist', async () => {
@@ -197,12 +214,14 @@ describe('setup skips already-present files', () => {
 
     await setup({
       config: { modelsDir, grammarsDir, embedder: 'openai', transformersModel: BASE_MODEL },
-      onProgress: (p) => { if (p.skipped) skippedItems.push(p.item); },
+      onProgress: (p) => {
+        if (p.skipped) skippedItems.push(p.item);
+      },
       _fetch: mockFetch,
     });
 
     assert.ok(skippedItems.includes('tree-sitter-python.wasm'));
-    assert.ok(!mockFetch.calls.some(url => url.includes('tree-sitter-python')));
+    assert.ok(!mockFetch.calls.some((url) => url.includes('tree-sitter-python')));
   });
 });
 
@@ -212,8 +231,12 @@ describe('setup skips already-present files', () => {
 
 describe('setup emits OpenAI tip for transformers embedder', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('calls onTip with the local-embeddings message', async () => {
     const tips: string[] = [];
@@ -241,8 +264,12 @@ describe('setup emits OpenAI tip for transformers embedder', () => {
 
 describe('setup does not emit tip for openai embedder', () => {
   let tmp: string;
-  before(async () => { tmp = await makeTmp(); });
-  after(async () => { await rm(tmp, { recursive: true, force: true }); });
+  before(async () => {
+    tmp = await makeTmp();
+  });
+  after(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
 
   it('onTip is never called when embedder is openai', async () => {
     const tips: string[] = [];
