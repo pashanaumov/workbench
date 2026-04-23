@@ -170,81 +170,15 @@ copy_workbench_files() {
   local source_root="$1"
   local target_root="$2"
 
-  mkdir -p "$target_root"/{skills,hooks,memory,session-memory,templates,.tmp,bin,packages}
+  mkdir -p "$target_root"/{skills,hooks,memory,session-memory,templates,.tmp,bin}
   cp -r "$source_root/skills/"* "$target_root/skills/"
   cp -r "$source_root/hooks/"* "$target_root/hooks/"
   cp -r "$source_root/templates/"* "$target_root/templates/"
   cp -r "$source_root/bin/"* "$target_root/bin/"
-  cp -r "$source_root/packages/core" "$target_root/packages/"
-  cp -r "$source_root/packages/mcp" "$target_root/packages/"
-  cp -r "$source_root/packages/cli" "$target_root/packages/"
   cp "$source_root/config.yaml" "$target_root/config.yaml"
   cp "$source_root/memory/MEMORY.md" "$target_root/memory/MEMORY.md"
-
-  for file in package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json; do
-    if [ -f "$source_root/$file" ]; then
-      cp "$source_root/$file" "$target_root/$file"
-    fi
-  done
 }
 
-bootstrap_indexer_runtime() {
-  local target_root="$1"
-
-  if [ ! -f "$target_root/package.json" ] || [ ! -f "$target_root/pnpm-workspace.yaml" ]; then
-    return 0
-  fi
-
-  if ! command -v node >/dev/null 2>&1; then
-    printf "${DIM}${BAR}${RESET}  ${YELLOW}○${RESET} Indexer runtime not prepared ${DIM}(Node.js not found)${RESET}\n"
-    return 0
-  fi
-
-  local launcher=""
-  if command -v pnpm >/dev/null 2>&1; then
-    launcher="pnpm"
-  elif command -v corepack >/dev/null 2>&1; then
-    launcher="corepack"
-  else
-    printf "${DIM}${BAR}${RESET}  ${YELLOW}○${RESET} Indexer runtime not prepared ${DIM}(pnpm/corepack not found)${RESET}\n"
-    printf "${DIM}${BAR}${RESET}    ${DIM}Run later: cd \"$target_root\" && corepack pnpm install && corepack pnpm run build${RESET}\n"
-    return 0
-  fi
-
-  printf "${CYAN}${STEP}${RESET}  Indexer Runtime\n"
-  printf "${DIM}${BAR}${RESET}\n"
-  printf "${DIM}${BAR}${RESET}  Installing indexer dependencies...\n"
-  if [ "$launcher" = "pnpm" ]; then
-    if ! (cd "$target_root" && pnpm install --frozen-lockfile >/dev/null 2>&1); then
-      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to install indexer dependencies\n"
-      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && pnpm install && pnpm run build${RESET}\n"
-      printf "\n"
-      return 0
-    fi
-    if ! (cd "$target_root" && pnpm run build >/dev/null 2>&1); then
-      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to build indexer packages\n"
-      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && pnpm run build${RESET}\n"
-      printf "\n"
-      return 0
-    fi
-  else
-    if ! (cd "$target_root" && corepack pnpm install --frozen-lockfile >/dev/null 2>&1); then
-      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to install indexer dependencies\n"
-      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && corepack pnpm install && corepack pnpm run build${RESET}\n"
-      printf "\n"
-      return 0
-    fi
-    if ! (cd "$target_root" && corepack pnpm run build >/dev/null 2>&1); then
-      printf "${DIM}${BAR}${RESET}  ${YELLOW}!${RESET} Failed to build indexer packages\n"
-      printf "${DIM}${BAR}${RESET}    ${DIM}Run manually: cd \"$target_root\" && corepack pnpm run build${RESET}\n"
-      printf "\n"
-      return 0
-    fi
-  fi
-
-  printf "${DIM}${BAR}${RESET}  ${GREEN}${CHECK}${RESET} Indexer runtime ready\n"
-  printf "\n"
-}
 
 printf "\n"
 
@@ -318,8 +252,6 @@ find "$TARGET/hooks" -name "*.sh" -type f -exec chmod +x {} \;
 chmod +x "$TARGET/bin/"*
 touch "$TARGET/memory/.gitkeep"
 touch "$TARGET/session-memory/.gitkeep"
-
-bootstrap_indexer_runtime "$TARGET"
 
 # MemPalace integration
 printf "${CYAN}${STEP}${RESET}  MemPalace Integration\n"

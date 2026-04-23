@@ -2,19 +2,10 @@
   "name": "workbench",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
-    "lint": "biome check packages/ scripts/",
-    "lint:fix": "biome check --write --unsafe packages/ scripts/",
-    "build": "tsc --build",
-    "build:watch": "tsc --build --watch",
-    "clean": "tsc --build --clean",
-    "bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/benchmark.ts",
-    "csn-bench": "node --experimental-strip-types --experimental-loader ./packages/core/loader.mjs scripts/csn-benchmark.ts",
-    "test": "pnpm --filter @workbench/core test"
+    "lint": "biome check skills/ hooks/ templates/ bin/"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
-    "typescript": "^5.5.0"
+    "@biomejs/biome": "^2.4.12"
   }
 }
