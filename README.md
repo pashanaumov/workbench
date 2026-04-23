@@ -1,8 +1,10 @@
 # Workbench
 
-Portable, tool-agnostic agent enhancement primitives — skills, hooks, memory files, and config that work across AI coding tools.
+Portable, tool-agnostic agent enhancement primitives — skills, hooks, memory files, and config that work across AI coding tools. No compilation step, no runtime dependency, no tool-specific lock-in.
 
-Derived from Claude Code's `skillify`, `sessionMemory`, and `autoDream` systems, distilled into universal building blocks with no compilation step, no runtime dependency, and no tool-specific lock-in.
+Derived from Claude Code's `skillify`, `sessionMemory`, and `autoDream` systems, distilled into universal building blocks.
+
+> **Semantic code search?** See the [scope plugin](https://github.com/pashanaumov/scope) — a standalone Claude Code plugin that indexes your codebase with ONNX embeddings + LanceDB and exposes it via MCP.
 
 ## What's Inside
 
@@ -40,18 +42,24 @@ You'll be prompted to choose:
 **Non-interactive:**
 
 ```bash
-# Global
+# Global installation
 curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash -s -- ~/.workbench
 
-# Local
+# Local installation
 curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh | bash -s -- .workbench
 
-# Fully scripted
+# Fully non-interactive (good for scripts/agents)
 curl -fsSL https://raw.githubusercontent.com/pashanaumov/workbench/main/install.sh \
   | bash -s -- --non-interactive --target .workbench --agent copilot --scope project --mempalace later
 ```
 
-**Verify:**
+The installer will:
+- Copy workbench files to the chosen location
+- Add `~/.workbench/bin` to PATH automatically (global install only)
+- Prompt for MemPalace integration (optional)
+- Set up agent integration (hooks, steering doc) for your AI tool
+
+**Verify installation:**
 
 ```bash
 workbench doctor          # global install
@@ -60,15 +68,15 @@ workbench doctor          # global install
 
 ### Setup
 
-The installer handles everything — after installing it will ask which AI tool you use and automatically install hooks and add the steering doc.
+The installer handles everything — it asks which AI tool you use and automatically installs hooks and adds the steering doc.
 
-To set up a different tool later:
+To set up a different tool after installation:
 
 ```bash
-workbench install copilot        # installs hooks + steering doc for Copilot
+workbench install copilot        # hooks + steering doc for Copilot
 ```
 
-Or manually for tools without hooks (Cursor, Windsurf, Kiro):
+Or manually add the steering doc for tools without hooks (Cursor, Windsurf, Kiro, Claude Code):
 
 ```
 /workbench setup
@@ -78,7 +86,7 @@ Or manually for tools without hooks (Cursor, Windsurf, Kiro):
 
 ### `/skillify`
 
-Capture the workflow you just performed as a reusable skill. Analyzes the session, interviews you about the process, and writes a `SKILL.md` you can invoke in future sessions.
+Capture the workflow you just performed as a reusable skill. Analyzes the session, interviews you about the process, and writes a `SKILL.md` file you can invoke in future sessions.
 
 ```
 /skillify "the cherry-pick workflow we just did"
@@ -114,21 +122,10 @@ Configure workbench settings interactively.
 /workbench config set dream.min_sessions 3
 ```
 
-## Semantic Code Search
-
-Semantic search has been extracted into a standalone Claude Code plugin: **[scope](https://github.com/pashanaumov/scope)**.
-
-```bash
-claude plugin marketplace add pashanaumov/scope
-claude plugin install scope@marketplace
-```
-
-This provides MCP tools (`index_codebase`, `search_code`, `get_indexing_status`, `clear_index`) and slash commands (`/scope:index`, `/scope:search`, `/scope:status`, `/scope:clear`).
-
 ## Modes
 
-- **global** (default): Only use `~/.workbench/` for skills, memory, and config
-- **local**: Only use `.workbench/` in project root
+- **global** (default): Use `~/.workbench/` for all skills, memory, and config
+- **local**: Use `.workbench/` in project root (per-project isolation)
 - **hybrid**: Check both; project-local overrides global
 
 Switch with `/workbench mode <global|local|hybrid>`.
@@ -139,66 +136,84 @@ Switch with `/workbench mode <global|local|hybrid>`.
 
 **Hooks** (optional) automate when skills run. The Copilot implementation is a reference — see `hooks/copilot/hooks.README.md` for the pattern and how to adapt it for other tools.
 
-**Memory** flows from session notes → dream consolidation → MEMORY.md index → injected into future sessions via steering doc.
+**Memory** flows: session notes → `/dream` consolidation → `MEMORY.md` index → injected into future sessions via steering doc.
 
-**Background behavior**: Memory loads automatically and silently at session start. Hook diagnostic output (🔧/✅) appears in stderr so you can see workbench is active.
+**Background behavior**: Memory loads silently at session start. Hook diagnostic output (🔧/✅) appears in stderr — intentional, shows workbench is active.
 
-**Without hooks**, use workbench manually:
+**Without hooks**, use manually:
 - `/session-extract` every 10–15 turns or at session end
 - `/dream` after every 5–10 sessions
 
 ## Tool Support
 
 | Tool | Hooks | Custom instructions | Setup |
-|------|-------|--------------------|----|
-| **Copilot Cloud Agent** | ✓ via `.github/hooks/` (must be on default branch) | ✓ `.github/copilot-instructions.md` | `workbench install copilot` + commit |
-| **Copilot CLI** | ✓ via `.github/hooks/` | ✓ `.github/copilot-instructions.md` or `AGENTS.md` | `workbench install copilot` |
-| **Cursor / Windsurf** | ✗ manual | ✓ `.cursorrules` / `.windsurfrules` | Add steering doc to rules file |
-| **Kiro / Claude Code** | ✗ manual | ✓ `AGENTS.md` | Add steering doc to AGENTS.md |
+|------|-------|---------------------|-------|
+| GitHub Copilot (cloud) | ✓ via `.github/hooks/` (commit required) | ✓ `.github/copilot-instructions.md` | `workbench install copilot` |
+| GitHub Copilot CLI | ✓ via `.github/hooks/` | ✓ `.github/copilot-instructions.md` or `AGENTS.md` | `workbench install copilot` |
+| Cursor | ✗ manual | ✓ `.cursorrules` | Add steering doc to rules file |
+| Windsurf | ✗ manual | ✓ `.windsurfrules` | Add steering doc to rules file |
+| Kiro / Claude Code | ✗ manual | ✓ `AGENTS.md` | Add steering doc to AGENTS.md |
+
+## Semantic Code Search
+
+For semantic codebase search, install the [scope plugin](https://github.com/pashanaumov/scope):
+
+```bash
+claude plugin marketplace add pashanaumov/scope
+claude plugin install scope@marketplace
+```
+
+Scope provides:
+- Hybrid vector + keyword search via MCP (`index_codebase`, `search_code`, `get_indexing_status`, `clear_index`)
+- Slash commands: `/scope:index`, `/scope:search`, `/scope:status`, `/scope:clear`
+- Local ONNX embeddings (no API key required) or OpenAI / Ollama backends
+- Per-project incremental indexing stored in `~/.config/scope/`
 
 ## MemPalace Integration
 
-Enhanced context loading and semantic memory search.
+MemPalace provides enhanced context loading and semantic memory search.
 
+**Enable after installation:**
 ```bash
-# Enable
 /workbench mempalace on
+```
 
-# Install
-npm install -g @mempalace/cli
+**Install MemPalace:**
+```bash
+npm install -g @mempalace/cli   # or: brew install mempalace
+```
 
-# Status
+**Check status:**
+```bash
 workbench mempalace status
 ```
 
-## CLI Commands
+## CLI Reference
 
 ```bash
-workbench init                      # Initialize workbench
-workbench doctor                    # Check installation health
-workbench print steering-doc        # Print steering doc snippet
-workbench install copilot [dir]     # Install Copilot hooks
-workbench copilot skills [--global] # Install skills to Copilot
-workbench mempalace status          # Check MemPalace status
+workbench init                       # Initialize workbench
+workbench doctor                     # Check installation health
+workbench print steering-doc         # Print steering doc snippet
+workbench install copilot [dir]      # Install Copilot hooks + steering doc
+workbench copilot skills [--global]  # Sync skills to Copilot skills directory
+workbench mempalace status           # Check MemPalace status
 ```
 
 ## Requirements
 
-- **Core skills**: None — just markdown and your AI tool
+- **Core**: None — pure bash and markdown
 - **Hooks**: Bash, basic Unix tools (`ls`, `grep`, `mkdir`)
 - **Optional**: `jq` or `yq` for config parsing (falls back to grep/awk)
 - **Optional**: [MemPalace](https://github.com/MemPalace/mempalace) for enhanced context loading
 
 ## Documentation
 
-- **Steering doc setup**: `templates/steering-doc-template.md`
-- **Hook installation**: `hooks/copilot/hooks.README.md`
-- **Copilot CLI setup**: `docs/copilot-cli-setup.md`
-- **Session note structure**: `templates/session-memory-template.md`
-- **Skill authoring**: `templates/skill-template.md`
-- **Configuration**: `config.yaml`
+- `templates/steering-doc-template.md` — steering doc reference
+- `hooks/copilot/hooks.README.md` — hook installation and adaptation guide
+- `templates/session-memory-template.md` — session note structure
+- `templates/skill-template.md` — skill authoring guide
+- `config.yaml` — configuration reference
 
 ## License
 
 MIT © Pasha Naumov
-
